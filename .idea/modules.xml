@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/HALModeling2024.iml" filepath="$PROJECT_DIR$/HALModeling2024.iml" />
+      <module fileurl="file://$PROJECT_DIR$/OnLattice2DCells/cells/cells.iml" filepath="$PROJECT_DIR$/OnLattice2DCells/cells/cells.iml" />
     </modules>
   </component>
 </project>
