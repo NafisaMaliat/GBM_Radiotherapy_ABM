@@ -18,3 +18,7 @@ HALModeling2024Outs/
 
 # Out directorygit stat
 /out/
+
+# Analysis output files
+analysis/.venv/
+
