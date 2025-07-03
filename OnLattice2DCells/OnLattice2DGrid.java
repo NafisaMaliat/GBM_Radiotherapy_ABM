@@ -27,26 +27,35 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
     public static List<int[]> triggeringSpaces = new ArrayList<>();
     public static List<int[]> lymphocyteSpaces = new ArrayList<>();
     public static int[][] lymphocyteNeighbors;
+    public double[][] bbbPermeability;
 
 
 
     public OnLattice2DGrid(int x, int y) {
         super(x, y, CellFunctions.class);
         this.oxygenField  = new OxygenField(xDim, yDim);
+        bbbPermeability = new double[xDim][yDim];
+
+        //Start with impermeable BBB everywhere
+        for (int i = 0; i < xDim; i++) {
+            for (int j = 0; j < yDim; j++) {
+                bbbPermeability[i][j] = 0.0; // 0.0 = completely impermeable, 1.0 = fully permeable
+            }
+        }
+
     }
 
-    public OxygenField getOxygenField() {
-        return oxygenField;
-    }
 
-    public void updateOxygenField() {
-        oxygenField.updateOxygenField(this);
-    }
-
-    public double getAverageTumorOxygen() {
-        return oxygenField.getAverageTumorOxygen(this);
-    }
-
+    /**
+     * Initializes the simulation grid and related components for modeling tumor and immune cell interactions.
+     * This method sets up the radiation parameters, validates input values, initializes lymphocyte and tumor cell populations,
+     * and prepares relevant probabilities and agents for simulation.
+     *
+     * @param win The GridWindow instance used for displaying the simulation results.
+     * @param model The OnLattice2DGrid instance representing the simulation grid.
+     * @param params The SimulationParameters instance containing the configuration parameters for the simulation, such as radiation settings, cell populations, and probabilities
+     * .
+     */
     public void Init(GridWindow win, OnLattice2DGrid model, SimulationParameters params) {
 
         if ((params.totalRadiation && params.centerRadiation) ||
@@ -92,8 +101,8 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             System.exit(0);
         }
 
-        params.currentRadiationDose = params.baseRadiationDose;
-        Lymphocytes.dieProb = CellFunctions.getLymphocytesProb(params.baseRadiationDose);
+        SimulationParameters.currentRadiationDose = SimulationParameters.baseRadiationDose;
+        Lymphocytes.dieProb = CellFunctions.getLymphocytesProb(SimulationParameters.baseRadiationDose);
         if (lymphocitePopulation > 0) {
             updateSpaces(win, params);
             if (tumorSize > 0) {
@@ -108,7 +117,7 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             CellFunctions.getImmuneSuppressionEffectThreshold(Lymphocytes.count <= 1);
         }
         CellFunctions.getImmuneResponse();
-        double[] Tvalues = CellFunctions.getTumorCellsProb(params.baseRadiationDose, 1.0);
+        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.baseRadiationDose, 1.0);
         TumorCells.count -= tumorSize;
         TumorCells.dieProbRad = Tvalues[0];
         TumorCells.dieProbImm = Tvalues[1];
@@ -139,6 +148,16 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         }
     }
 
+    /**
+     * Advances the simulation by executing a single step for all cells in the grid.
+     * This method iterates over the grid, invoking the step functionality for each cell
+     * and optionally disposing of random triggering cells if certain conditions are met.
+     *
+     * @param model The OnLattice2DGrid instance representing the simulation grid
+     *              where the cell interactions and updates take place.
+     * @param params The SimulationParameters instance containing the configuration
+     *               parameters required for the cells' behavior during the simulation step.
+     */
     public void StepCells(OnLattice2DGrid model , SimulationParameters params) {
         triggeringDied = false;
         for (CellFunctions cell : this) //this is a for-each loop, "this" refers to this grid
@@ -150,6 +169,15 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         }
     }
 
+    /**
+     * Updates the classification of spaces in the simulation grid.
+     * This method iterates through all grid cells, clearing and updating lists for different types of spaces:
+     * available spaces, tumor spaces, triggering spaces, and lymphocyte spaces. Each space type is populated based on
+     * the state and type of the cell at the given grid location.
+     *
+     * @param win The GridWindow instance used for rendering and interacting with the simulation grid.
+     * @param params The SimulationParameters instance containing configuration data, including the list of available spaces to update.
+     */
     public void updateSpaces(GridWindow win, SimulationParameters params) {
         params.availableSpaces.clear();
         tumorSpaces.clear();
@@ -175,6 +203,53 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         }
     }
 
+    /**
+     * Updates the blood-brain barrier (BBB) permeability across the grid.
+     * This method iterates over all grid cells and increases the BBB permeability
+     * for cells that meet specific conditions. Specifically, if a cell is of type
+     * TUMOR and has been radiated, its permeability is increased by a predefined
+     * rate up to a maximum threshold of 1.0.
+     *
+     * The method leverages the `bbbPermeability` grid to maintain permeability values
+     * for each cell, and updates only the corresponding cells satisfying the conditions.
+     *
+     * Preconditions:
+     * - The grid dimensions (xDim, yDim) are defined and valid.
+     * - The `bbbPermeability` matrix is initialized and corresponds to the grid size.
+     * - The `GetAgent` method is implemented to retrieve agent data at specific grid coordinates.
+     *
+     * Postconditions:
+     * - The `bbbPermeability` values of eligible cells are updated, ensuring no value exceeds 1.0.
+     *
+     * Design notes:
+     * - The rate at which permeability increases (`bbbIncreaseRate`) is tunable for simulation purposes.
+     * - Ensures robust handling of null cells within the grid.
+     * - Operates on grid cells of type TUMOR that are radiated, linking permeability logic to biological phenomena.
+     */
+    public void updateBBBPermeability() {
+        double bbbIncreaseRate = 0.3; // Tunable: How much BBB opens up post-radiation
+
+        for (int i = 0; i < xDim; i++) {
+            for (int j = 0; j < yDim; j++) {
+                CellFunctions cell = GetAgent(i, j);
+                if (cell != null && cell.type == CellFunctions.Type.TUMOR && cell.radiated) {
+                    bbbPermeability[i][j] = Math.min(1.0, bbbPermeability[i][j] + bbbIncreaseRate);
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Draws the current state of the simulation model on the provided grid window and updates the probabilities
+     * for tumor and triggering cells based on the current simulation parameters. This method also adjusts
+     * probabilities for immune suppression effects and optionally appends frames to a GIF if enabled.
+     *
+     * @param win The GridWindow instance that visually represents the current state of the simulation grid.
+     * @param gif The GifMaker instance used to generate and save GIFs of the simulation if GIF generation is enabled.
+     * @param params The SimulationParameters instance containing the configurable parameters such as radiation dose,
+     *               immune suppression effects, and other associated properties relevant to the simulation dynamics.
+     */
     public void DrawModelandUpdateProb(GridWindow win, GifMaker gif, SimulationParameters params) {
         int color;
 
@@ -183,11 +258,11 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         }
         CellFunctions.getImmuneResponse();
         double avgOxygen = oxygenField.getAverageTumorOxygen(this);
-        double[] Tvalues = CellFunctions.getTumorCellsProb(params.baseRadiationDose, avgOxygen);
+        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.baseRadiationDose, avgOxygen);
         TumorCells.dieProbRad = Tvalues[0];
         TumorCells.dieProbImm = Tvalues[1];
         TumorCells.divProb = Tvalues[2];
-        double[] Avalues = CellFunctions.getTriggeringCellsProb(params.baseRadiationDose);
+        double[] Avalues = CellFunctions.getTriggeringCellsProb(SimulationParameters.baseRadiationDose);
         TriggeringCells.dieProb = Avalues[0];
         TriggeringCells.activateProb = Avalues[1];
 
@@ -212,6 +287,20 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         if (Main.writeGIF) gif.AddFrame(win);
     }
 
+    /**
+     * Calculates and returns the coordinates defining the boundaries and center of the tumor region.
+     * This method iterates through the list of tumor cells to find the minimum and maximum
+     * x and y coordinates, which represent the bounding box around the tumor. It also calculates
+     * the center of this bounding box.
+     *
+     * @return An integer array containing, in order:
+     *         - Minimum x-coordinate of the tumor region.
+     *         - Maximum x-coordinate of the tumor region.
+     *         - Minimum y-coordinate of the tumor region.
+     *         - Maximum y-coordinate of the tumor region.
+     *         - x-coordinate of the center of the tumor region.
+     *         - y-coordinate of the center of the tumor region.
+     */
     public int[] getTumorCoord() {
         int minX = tumorSpaces.get(0)[0];
         int maxX = tumorSpaces.get(tumorSpaces.size() - 1)[0];
@@ -231,11 +320,32 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
     public void applyTMZ() {
         for (CellFunctions cell : this) {
             if (cell.type == CellFunctions.Type.TUMOR) {
-                cell.dieProbRad += 0.005; // Example: increase death probability slightly
+                double bbbFactor = bbbPermeability[cell.Xsq()][cell.Ysq()];
+
+                double effectiveResistance = Math.min(1.0, cell.tmzResistance);
+                double drugEffect = FigParameters.tmzBaseEffect * bbbFactor * (1.0 - effectiveResistance);
+
+                cell.dieProbRad += drugEffect;
+                // ✅ Time/Exposure-driven resistance evolution:
+                if (bbbFactor > 0) { // Only if drug can reach the cell
+                    cell.tmzResistance += FigParameters.tmzResistanceIncreaseRate;
+                    cell.tmzResistance = Math.min(1.0, cell.tmzResistance); // Cap at full resistance
+                }
             }
         }
     }
 
+    public OxygenField getOxygenField() {
+        return oxygenField;
+    }
+
+    public void updateOxygenField() {
+        oxygenField.updateOxygenField(this);
+    }
+
+    public double getAverageTumorOxygen() {
+        return oxygenField.getAverageTumorOxygen(this);
+    }
 
 
 }

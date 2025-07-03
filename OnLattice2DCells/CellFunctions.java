@@ -17,6 +17,9 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     Double dieProbImm;
     Double divProb;
     Double activateProb;
+    Phenotype phenotype;
+    double tmzResistance; // 0.0 = fully sensitive, 1.0 = fully resistant
+
 
     public enum Type {
         LYMPHOCYTE,
@@ -24,11 +27,17 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         DOOMED,
         TRIGGERING
     }
+    public enum Phenotype {
+        PROLIFERATIVE,
+        INVASIVE
+    }
+
+
 
     public void Init(Type type, SimulationParameters params) {
         this.type = type;
-        this.radiationDose = params.baseRadiationDose;
-        if (params.baseRadiationDose == 0) {
+        this.radiationDose = SimulationParameters.baseRadiationDose;
+        if (SimulationParameters.baseRadiationDose == 0) {
             this.radiated = false;
         } else {
             this.radiated = true;
@@ -52,6 +61,7 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
             this.dieProbImm = TumorCells.dieProbImm;
             this.divProb = TumorCells.divProb;
             this.activateProb = null;
+            this.tmzResistance = 0.0; // Start fully sensitive
 
         } else if (type == Type.TRIGGERING) {
             this.color = Util.CategorialColor(TriggeringCells.colorIndex);
@@ -89,10 +99,28 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
             assert G != null;
             double localOxygen = G.getOxygenField().getOxygenLevel(this.Xsq(), this.Ysq());
 
+            if (localOxygen < FigParameters.hypoxiaThreshold) {
+                this.phenotype = Phenotype.INVASIVE;
+            } else {
+                this.phenotype = Phenotype.PROLIFERATIVE;
+            }
+
+            if (localOxygen < FigParameters.severeHypoxiaThreshold && G.rng.Double() < FigParameters.hypoxiaDeathRate) {
+                Dispose();
+                TumorCells.count--;
+                return;
+            }
+
             double[] probs = CellFunctions.getTumorCellsProb(this.radiationDose, localOxygen);
             this.dieProbRad = probs[0];
             this.dieProbImm = probs[1];
             this.divProb = probs[2];
+
+            // Mutation-driven resistance acquisition
+            if (G.rng.Double() < FigParameters.mutationRate) {
+                this.tmzResistance += FigParameters.resistanceJump;
+                this.tmzResistance = Math.min(1.0, this.tmzResistance);
+            }
 
             if (G.rng.Double() < this.dieProbRad) {
                 if (this.radiated) {
@@ -201,11 +229,11 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     public void lymphocyteMigration(OnLattice2DGrid G, GridWindow win, SimulationParameters params) {
         double volumeDamagedTumorCells = (double) DoomedCells.countRad / (DoomedCells.count + TumorCells.count);
         double survivingFractionT;
-        if (params.currentRadiationDose == params.baseRadiationDose) {
-            survivingFractionT = getSurvivingFraction(params.baseRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
+        if (SimulationParameters.currentRadiationDose == SimulationParameters.baseRadiationDose) {
+            survivingFractionT = getSurvivingFraction(SimulationParameters.baseRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
         } else {
-            double survivingFractionTUnradiated = getSurvivingFraction(params.baseRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
-            double survivingFractionTRadiated = getSurvivingFraction(params.currentRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
+            double survivingFractionTUnradiated = getSurvivingFraction(SimulationParameters.baseRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
+            double survivingFractionTRadiated = getSurvivingFraction(SimulationParameters.currentRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
             survivingFractionT = (TumorCells.countRad * survivingFractionTRadiated + (TumorCells.count - TumorCells.countRad) * survivingFractionTUnradiated) / TumorCells.count;
         }
 
@@ -254,9 +282,15 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
                 int[] space = iterator.next();
                 cumulativeProbability += probabilities[space[0]][space[1]];
                 if (rand < cumulativeProbability && checkLymphocyteDensity(G, space)) {
-                    selectedPixels.add(space);
-                    G.NewAgentSQ(space[0], space[1]).Init(Type.LYMPHOCYTE, params);
-                    Lymphocytes.count++;
+                    double bbbFactor = G.bbbPermeability[space[0]][space[1]];
+
+                    // Only allow infiltration if BBB permeability allows
+                    if (G.rng.Double() < bbbFactor) {
+                        selectedPixels.add(space);
+                        G.NewAgentSQ(space[0], space[1]).Init(Type.LYMPHOCYTE, params);
+                        Lymphocytes.count++;
+                    }
+
                     iterator.remove();
                     //OnLattice2DGrid.availableSpaces.remove(space);
                     totalProbability -= probabilities[space[0]][space[1]];

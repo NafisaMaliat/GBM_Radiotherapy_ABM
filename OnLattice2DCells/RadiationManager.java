@@ -156,16 +156,16 @@ public class RadiationManager {
     }
 
     public void radiationApplied() {
-        params.currentRadiationDose = params.appliedRadiationDose;
-        double LDieProb = CellFunctions.getLymphocytesProb(params.currentRadiationDose);
+        SimulationParameters.currentRadiationDose = SimulationParameters.appliedRadiationDose;
+        double LDieProb = CellFunctions.getLymphocytesProb(SimulationParameters.currentRadiationDose);
         double avgOxygen = grid.getAverageTumorOxygen();
-        double[] Tvalues = CellFunctions.getTumorCellsProb(params.currentRadiationDose, avgOxygen);
-        double[] Avalues = CellFunctions.getTriggeringCellsProb(params.currentRadiationDose);
+        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.currentRadiationDose, avgOxygen);
+        double[] Avalues = CellFunctions.getTriggeringCellsProb(SimulationParameters.currentRadiationDose);
 
         for (int[] pixel : params.radiatedPixels) {
             CellFunctions cell = grid.GetAgent(pixel[0], pixel[1]);
             if (cell != null) {
-                cell.radiationDose = params.currentRadiationDose;
+                cell.radiationDose = SimulationParameters.currentRadiationDose;
                 if (cell.type == CellFunctions.Type.LYMPHOCYTE) {
                     cell.dieProb = LDieProb;
                 } else if (cell.type == CellFunctions.Type.TUMOR) {
@@ -183,15 +183,17 @@ public class RadiationManager {
                 cell.radiated = true;
             }
         }
+        // Update BBB permeability after radiation is applied
+        grid.updateBBBPermeability();
     }
 
     public void radiationUnapplied() {
-        params.currentRadiationDose = params.baseRadiationDose;
+        SimulationParameters.currentRadiationDose = SimulationParameters.baseRadiationDose;
 
         for (int[] pixel : params.radiatedPixels) {
             CellFunctions cell = grid.GetAgent(pixel[0], pixel[1]);
             if (cell != null) {
-                cell.radiationDose = params.currentRadiationDose;
+                cell.radiationDose = SimulationParameters.currentRadiationDose;
                 if (cell.type == CellFunctions.Type.LYMPHOCYTE) {
                     cell.dieProb = Lymphocytes.dieProb;
                 }

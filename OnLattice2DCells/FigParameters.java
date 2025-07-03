@@ -14,10 +14,19 @@ class FigParameters {
     public static double recoveryConstantOfA;
     public static double radiationInducedInfiltration; //null
     public static double immuneSuppressionEffect;
+    public static double hypoxiaThreshold;
+    public static double severeHypoxiaThreshold;
+    public static double hypoxiaDeathRate;
+    public static double tmzBaseEffect;
+    public static double tmzResistanceIncreaseRate;
+    public static double mutationRate;
+    public static double resistanceJump;
+
+
 
     public FigParameters(int figure) {
         this.figure = figure;
-        if (figure == 2) {
+        if (figure == 2) {   // Baseline Control / Null Scenario
             radiationSensitivityOfTumorCellsAlpha = 0; //null
             radiationSensitivityOfTumorCellsBeta = 0;  //null
             radiationSensitivityOfLymphocytesAlpha = 0; //null
@@ -30,7 +39,13 @@ class FigParameters {
             recoveryConstantOfA = 0.039;
             radiationInducedInfiltration = 0; //null
             immuneSuppressionEffect = 0.012;
-        } else if (figure == 3) {
+
+            // Add oxygen-related parameters
+            hypoxiaThreshold = 0.4; // Below this, cells switch to invasive phenotype
+            severeHypoxiaThreshold = 0.2; // Below this, cells face risk of death
+            hypoxiaDeathRate = 0.05; // Chance of death per timestep under severe hypoxia (5% chance of death)
+
+        } else if (figure == 3) { // Immune Suppression Scenario
             radiationSensitivityOfTumorCellsAlpha = 0.05;
             radiationSensitivityOfTumorCellsBeta = 0.0114;
             radiationSensitivityOfLymphocytesAlpha = 0.182;
@@ -43,7 +58,18 @@ class FigParameters {
             recoveryConstantOfA = 0.045;
             radiationInducedInfiltration = 0; //null
             immuneSuppressionEffect = 0.51;
-        } else if (figure == 4) {
+
+            // Add oxygen-related parameters
+            hypoxiaThreshold = 0.4;
+            severeHypoxiaThreshold = 0.2;
+            hypoxiaDeathRate = 0.05;
+
+            tmzBaseEffect=0.005;
+            tmzResistanceIncreaseRate = 0.01; // 1% increase per timestep if exposed
+            mutationRate = 0.0005; // Chance per timestep for random resistance jump
+            resistanceJump = 0.2;
+
+        } else if (figure == 4) { //Highly Invasive/Highly Suppressed Scenario
             radiationSensitivityOfTumorCellsAlpha = 0.05;
             radiationSensitivityOfTumorCellsBeta = 0.0114;
             radiationSensitivityOfLymphocytesAlpha = 0.182;
@@ -56,7 +82,12 @@ class FigParameters {
             recoveryConstantOfA = 0.045;
             radiationInducedInfiltration = 300;
             immuneSuppressionEffect = 1.1;
-        } else if (figure == 5) {
+
+            // Add oxygen-related parameters
+            hypoxiaThreshold = 0.4;
+            severeHypoxiaThreshold = 0.2;
+            hypoxiaDeathRate = 0.05;
+        } else if (figure == 5) { // same as 4
             radiationSensitivityOfTumorCellsAlpha = 0.05;
             radiationSensitivityOfTumorCellsBeta = 0.0114;
             radiationSensitivityOfLymphocytesAlpha = 0.182;
@@ -69,7 +100,12 @@ class FigParameters {
             recoveryConstantOfA = 0.045;
             radiationInducedInfiltration = 300;
             immuneSuppressionEffect = 1.1;
-        } else if (figure == 6) {
+
+            // Add oxygen-related parameters
+            hypoxiaThreshold = 0.4;
+            severeHypoxiaThreshold = 0.2;
+            hypoxiaDeathRate = 0.05;
+        } else if (figure == 6) { //Radiation-Resistant / Low Growth Scenario
             radiationSensitivityOfTumorCellsAlpha = 0.214;
             radiationSensitivityOfTumorCellsBeta = 0.0214;
             radiationSensitivityOfLymphocytesAlpha = 0.182;
@@ -82,6 +118,11 @@ class FigParameters {
             recoveryConstantOfA = 0.045;
             radiationInducedInfiltration = 4.6;
             immuneSuppressionEffect = 0.5;
+
+            // Add oxygen-related parameters
+            hypoxiaThreshold = 0.4;
+            severeHypoxiaThreshold = 0.2;
+            hypoxiaDeathRate = 0.05;
         } else {
             System.err.println("Figure " + figure + " is not a valid figure number.");
             System.exit(0);
