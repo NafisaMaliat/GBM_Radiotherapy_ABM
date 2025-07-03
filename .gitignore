@@ -15,3 +15,6 @@ HALModeling2024Outs/
 
 # Logs
 *.log
+
+# Out directorygit stat
+/out/
