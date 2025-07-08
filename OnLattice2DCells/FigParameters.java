@@ -40,34 +40,24 @@ class FigParameters {
             radiationInducedInfiltration = 0; //null
             immuneSuppressionEffect = 0.012;
 
-            // Add oxygen-related parameters
-            hypoxiaThreshold = 0.4; // Below this, cells switch to invasive phenotype
-            severeHypoxiaThreshold = 0.2; // Below this, cells face risk of death
-            hypoxiaDeathRate = 0.05; // Chance of death per timestep under severe hypoxia (5% chance of death)
+        } else if (figure == 3) {
+            // Glioblastoma specific parameters
 
-        } else if (figure == 3) { // Immune Suppression Scenario
-            radiationSensitivityOfTumorCellsAlpha = 0.05;
-            radiationSensitivityOfTumorCellsBeta = 0.0114;
+            radiationSensitivityOfTumorCellsAlpha = 0.36;
+            radiationSensitivityOfTumorCellsBeta = 0.02;
+
             radiationSensitivityOfLymphocytesAlpha = 0.182;
             radiationSensitivityOfLymphocytesBeta = 0.143;
-            tumorGrowthRate = 0.217;
-            tumorInfiltrationRate = 0.05; //in original ODE model, is 0.5
-            rateOfCellKilling = 0.135;
-            decayConstantOfD = 0.045;
-            decayConstantOfL = 0.045;
-            recoveryConstantOfA = 0.045;
-            radiationInducedInfiltration = 0; //null
-            immuneSuppressionEffect = 0.51;
 
-            // Add oxygen-related parameters
-            hypoxiaThreshold = 0.4;
-            severeHypoxiaThreshold = 0.2;
-            hypoxiaDeathRate = 0.05;
+            tumorGrowthRate = 0.014;
+            tumorInfiltrationRate = 0.5;
 
-            tmzBaseEffect=0.005;
-            tmzResistanceIncreaseRate = 0.01; // 1% increase per timestep if exposed
-            mutationRate = 0.0005; // Chance per timestep for random resistance jump
-            resistanceJump = 0.2;
+            rateOfCellKilling = 0.1; // 0.05-0.135
+            decayConstantOfD = 0.039;
+            decayConstantOfL = 0.335;
+            recoveryConstantOfA = 0.039;
+            radiationInducedInfiltration = 10; 
+            immuneSuppressionEffect = 1.1;
 
         } else if (figure == 4) { //Highly Invasive/Highly Suppressed Scenario
             radiationSensitivityOfTumorCellsAlpha = 0.05;
@@ -83,10 +73,7 @@ class FigParameters {
             radiationInducedInfiltration = 300;
             immuneSuppressionEffect = 1.1;
 
-            // Add oxygen-related parameters
-            hypoxiaThreshold = 0.4;
-            severeHypoxiaThreshold = 0.2;
-            hypoxiaDeathRate = 0.05;
+
         } else if (figure == 5) { // same as 4
             radiationSensitivityOfTumorCellsAlpha = 0.05;
             radiationSensitivityOfTumorCellsBeta = 0.0114;
@@ -101,10 +88,7 @@ class FigParameters {
             radiationInducedInfiltration = 300;
             immuneSuppressionEffect = 1.1;
 
-            // Add oxygen-related parameters
-            hypoxiaThreshold = 0.4;
-            severeHypoxiaThreshold = 0.2;
-            hypoxiaDeathRate = 0.05;
+
         } else if (figure == 6) { //Radiation-Resistant / Low Growth Scenario
             radiationSensitivityOfTumorCellsAlpha = 0.214;
             radiationSensitivityOfTumorCellsBeta = 0.0214;
@@ -119,10 +103,7 @@ class FigParameters {
             radiationInducedInfiltration = 4.6;
             immuneSuppressionEffect = 0.5;
 
-            // Add oxygen-related parameters
-            hypoxiaThreshold = 0.4;
-            severeHypoxiaThreshold = 0.2;
-            hypoxiaDeathRate = 0.05;
+
         } else {
             System.err.println("Figure " + figure + " is not a valid figure number.");
             System.exit(0);

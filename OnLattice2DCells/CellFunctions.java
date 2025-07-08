@@ -17,8 +17,6 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     Double dieProbImm;
     Double divProb;
     Double activateProb;
-    Phenotype phenotype;
-    double tmzResistance; // 0.0 = fully sensitive, 1.0 = fully resistant
 
 
     public enum Type {
@@ -26,10 +24,6 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         TUMOR,
         DOOMED,
         TRIGGERING
-    }
-    public enum Phenotype {
-        PROLIFERATIVE,
-        INVASIVE
     }
 
 
@@ -61,7 +55,7 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
             this.dieProbImm = TumorCells.dieProbImm;
             this.divProb = TumorCells.divProb;
             this.activateProb = null;
-            this.tmzResistance = 0.0; // Start fully sensitive
+
 
         } else if (type == Type.TRIGGERING) {
             this.color = Util.CategorialColor(TriggeringCells.colorIndex);
@@ -97,30 +91,13 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         } else if (this.type == Type.TUMOR) {
             // Update probabilities based on local oxygen
             assert G != null;
-            double localOxygen = G.getOxygenField().getOxygenLevel(this.Xsq(), this.Ysq());
 
-            if (localOxygen < FigParameters.hypoxiaThreshold) {
-                this.phenotype = Phenotype.INVASIVE;
-            } else {
-                this.phenotype = Phenotype.PROLIFERATIVE;
-            }
-
-            if (localOxygen < FigParameters.severeHypoxiaThreshold && G.rng.Double() < FigParameters.hypoxiaDeathRate) {
-                Dispose();
-                TumorCells.count--;
-                return;
-            }
-
-            double[] probs = CellFunctions.getTumorCellsProb(this.radiationDose, localOxygen);
+            double[] probs = CellFunctions.getTumorCellsProb(this.radiationDose);
             this.dieProbRad = probs[0];
             this.dieProbImm = probs[1];
             this.divProb = probs[2];
 
-            // Mutation-driven resistance acquisition
-            if (G.rng.Double() < FigParameters.mutationRate) {
-                this.tmzResistance += FigParameters.resistanceJump;
-                this.tmzResistance = Math.min(1.0, this.tmzResistance);
-            }
+
 
             if (G.rng.Double() < this.dieProbRad) {
                 if (this.radiated) {
@@ -282,14 +259,10 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
                 int[] space = iterator.next();
                 cumulativeProbability += probabilities[space[0]][space[1]];
                 if (rand < cumulativeProbability && checkLymphocyteDensity(G, space)) {
-                    double bbbFactor = G.bbbPermeability[space[0]][space[1]];
 
-                    // Only allow infiltration if BBB permeability allows
-                    if (G.rng.Double() < bbbFactor) {
-                        selectedPixels.add(space);
-                        G.NewAgentSQ(space[0], space[1]).Init(Type.LYMPHOCYTE, params);
-                        Lymphocytes.count++;
-                    }
+                    selectedPixels.add(space);
+                    G.NewAgentSQ(space[0], space[1]).Init(Type.LYMPHOCYTE, params);
+                    Lymphocytes.count++;
 
                     iterator.remove();
                     //OnLattice2DGrid.availableSpaces.remove(space);
@@ -376,23 +349,11 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     }
 
 
-    public static double[] getTumorCellsProb(int radiationDose, double localOxygen) {
+    public static double[] getTumorCellsProb(int radiationDose) {
         double survivingFractionT = getSurvivingFraction(radiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
         double dieProbRad = 1 - survivingFractionT;
-
-        // Hypoxia reduces radiation-induced death
-        double hypoxiaResistanceFactor = 1.0 - 0.5 * (1.0 - localOxygen);
-        // At 0% oxygen → 50% reduction in radiation death
-        dieProbRad *= hypoxiaResistanceFactor;
-
-        // GBM-specific immune suppression factor
-        double gbmImmuneSuppressionFactor = 0.3; // Tune between 0.1 to 0.5 for strong suppression
-        double dieProbImm = survivingFractionT * OnLattice2DGrid.immuneResponse * gbmImmuneSuppressionFactor;
-
-        // GBM-specific invasion boost factor ( > 1 increases invasion likelihood)
-        double gbmInvasionBoost = 1.5;  // Tune between 1.2 to 2.0 for more aggressive invasion
-
-        double divProb = survivingFractionT * (1 - OnLattice2DGrid.immuneResponse) * FigParameters.tumorGrowthRate * gbmInvasionBoost;
+        double dieProbImm = survivingFractionT * OnLattice2DGrid.immuneResponse ;
+        double divProb = survivingFractionT * (1 - OnLattice2DGrid.immuneResponse) * FigParameters.tumorGrowthRate;
         return new double[]{dieProbRad, dieProbImm, divProb};
     }
 

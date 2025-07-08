@@ -80,56 +80,6 @@ class ScenarioParameters {
             params.spatialRadiation = false;
             params.targetPercentage = 1;
             FigParameters.immuneSuppressionEffect = 0.1;
-        } else if (scenario == 'F') // TMZ Continuous Therapy
-        {
-            Main.figure = 3;
-            new FigParameters(Main.figure);
-            SimulationParameters.baseRadiationDose = 0;
-            SimulationParameters.appliedRadiationDose = 0; // No radiation
-            Main.radiationTimesteps = List.of(); // No radiation timesteps
-            params.totalRadiation = false;
-            params.centerRadiation = false;
-            params.spatialRadiation = false;
-            Main.tmzTimesteps = "continuous"; // Custom field you can create to track TMZ type
-            FigParameters.immuneSuppressionEffect = 0.1;
-        } else if (scenario == 'G') // TMZ Pulsed Therapy
-        {
-            Main.figure = 3;
-            new FigParameters(Main.figure);
-            SimulationParameters.baseRadiationDose = 0;
-            SimulationParameters.appliedRadiationDose = 0; // No radiation
-            Main.radiationTimesteps = List.of(); // No radiation timesteps
-            params.totalRadiation = false;
-            params.centerRadiation = false;
-            params.spatialRadiation = false;
-            Main.tmzTimesteps = List.of(200, 400, 600, 800); // Pulsed delivery at intervals
-            FigParameters.immuneSuppressionEffect = 0.1;
-        } else if (scenario == 'H') // RT + TMZ (Concurrent)
-        {
-            Main.figure = 3;
-            new FigParameters(Main.figure);
-            SimulationParameters.baseRadiationDose = 0;
-            SimulationParameters.appliedRadiationDose = 10;
-            Main.radiationTimesteps = List.of(200, 400, 600); // Example of fractionated RT
-            params.totalRadiation = false;
-            params.centerRadiation = true;
-            params.spatialRadiation = false;
-            params.targetPercentage = 1;
-            Main.tmzTimesteps = "continuous"; // Continuous TMZ during radiation
-            FigParameters.immuneSuppressionEffect = 0.1;
-        } else if (scenario == 'I') // RT + TMZ (Adjuvant)
-        {
-            Main.figure = 3;
-            new FigParameters(Main.figure);
-            SimulationParameters.baseRadiationDose = 0;
-            SimulationParameters.appliedRadiationDose = 10;
-            Main.radiationTimesteps = List.of(200, 400, 600); // RT first
-            params.totalRadiation = false;
-            params.centerRadiation = true;
-            params.spatialRadiation = false;
-            params.targetPercentage = 1;
-            Main.tmzTimesteps = List.of(700, 800, 900); // TMZ after radiation
-            FigParameters.immuneSuppressionEffect = 0.1;
         } else {
             System.err.printf("Invalid scenario: %s.%nPlease provide a valid scenario (A, B, C, D, E) or set 'scenarioActive' to false.%n", scenario);
             System.exit(0);

@@ -120,18 +120,9 @@ public class Main {
 
             model.updateSpaces(win,params);
 
-            // Update oxygen AFTER cells have moved/divided/died
-            model.updateOxygenField();
-
             // Lymphocyte Migration
             if (TriggeringCells.count > 0) {
                 new CellFunctions().lymphocyteMigration(model, win, params);
-            }
-            // Apply TMZ effect
-            if ((tmzTimesteps instanceof String && tmzTimesteps.equals("continuous")) ||
-                    (tmzTimesteps instanceof List && ((List<Integer>) tmzTimesteps).contains(i))) {
-                // Apply TMZ effect on tumor cells
-                model.applyTMZ();
             }
 
 

@@ -158,8 +158,7 @@ public class RadiationManager {
     public void radiationApplied() {
         SimulationParameters.currentRadiationDose = SimulationParameters.appliedRadiationDose;
         double LDieProb = CellFunctions.getLymphocytesProb(SimulationParameters.currentRadiationDose);
-        double avgOxygen = grid.getAverageTumorOxygen();
-        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.currentRadiationDose, avgOxygen);
+        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.currentRadiationDose);
         double[] Avalues = CellFunctions.getTriggeringCellsProb(SimulationParameters.currentRadiationDose);
 
         for (int[] pixel : params.radiatedPixels) {
@@ -183,8 +182,6 @@ public class RadiationManager {
                 cell.radiated = true;
             }
         }
-        // Update BBB permeability after radiation is applied
-        grid.updateBBBPermeability();
     }
 
     public void radiationUnapplied() {
