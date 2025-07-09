@@ -8,7 +8,7 @@ class analyse_results:
 
     plot_with_CIs = False
     scenarioAnalysis = True
-    scenario = 'C'
+    scenario = 'MB350'
     timesteps500 = True
     graph_immune = True
 
@@ -21,9 +21,9 @@ class analyse_results:
 
     # Specify the full path to the CSV file
     if not plot_with_CIs:
-        file_path = '/Users/tanayabowade/Downloads/HALModeling2024/TrialRunCounts.csv'
+        file_path = '/Users/tanayabowade/Downloads/ABM_GliobMul/TrialRunCounts.csv'
         if scenarioAnalysis:
-            folder_path = f'/Users/tanayabowade/Downloads/HALModeling2024/HALModeling2024Outs/Scenario{scenario}/*.csv'
+            folder_path = f'/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs/Scenario{scenario}/*.csv'
             all_files = glob.glob(folder_path)
             # Sort the files alphabetically and select the last one
             if all_files:
@@ -58,7 +58,7 @@ class analyse_results:
 
     if plot_with_CIs:
         print("Scenario:", scenario)
-        file_path = f'/Users/tanayabowade/Downloads/HALModeling2024/HALModeling2024Outs/Scenario{scenario}/*.csv'
+        file_path = f'/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs/Scenario{scenario}/*.csv'
         all_files = glob.glob(file_path)
 
         # Initialize lists for plotting
@@ -69,7 +69,7 @@ class analyse_results:
         doomed_cells = []
 
         # Check if scenario is C, D, or E
-        if scenario in ['C', 'D', 'E']:
+        if scenario in ['C', 'D', 'E','BB5','BB10','BB15','MRT200','MRT400','MRT600','MB180','MB350']:
             included_files = []  # List to keep track of included files
             # Read each file and append the data only if max timestep >= 200
             for file in all_files:
@@ -183,7 +183,7 @@ class analyse_results:
     plt.legend(prop={'size': 14})
     plt.grid(True)
     plt.ylim(0, 5000)  # Set y-axis limits from 0 to 5000
-    save_path = f'/Users/tanayabowade/Downloads/HALModeling2024/HALModeling2024Outs/TrialRunGraphScenario{scenario}.png'
+    save_path = f'/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs/TrialRunGraphScenario{scenario}.png'
     plt.savefig(save_path, dpi=600, bbox_inches='tight')
 
     # Immune Graph
@@ -201,9 +201,9 @@ class analyse_results:
         plt.grid(True)
 
         if scenarioAnalysis:
-            save_path = f'/Users/tanayabowade/Downloads/HALModeling2024/HALModeling2024Outs/Scenario{scenario}ImmuneResponse.png'
+            save_path = f'/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs/Scenario{scenario}ImmuneResponse.png'
         else :
-            save_path = '/Users/tanayabowade/Downloads/HALModeling2024/HALModeling2024Outs/TrialRunGraphImmuneResponse.png'
+            save_path = '/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs/TrialRunGraphImmuneResponse.png'
 
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
 

@@ -10,26 +10,22 @@ import java.util.List;
 
 public class Main {
 
-    public static int figure = 3;
+    // Default values, unless specified explicitly
+    public static int figure = 2;
     public static int baseRadiationDose = 0, currentRadiationDose = baseRadiationDose, appliedRadiationDose = 10;
     public static List<Integer> radiationTimesteps = List.of(200);
-    public static boolean totalRadiation = false, centerRadiation = true, spatialRadiation = false;
+    public static boolean totalRadiation = false, centerRadiation = false, spatialRadiation = false;
     public static double targetPercentage = 0.7;
     public static double thresholdPercentage = 0.8;
     public static int radius = 10;
     public static boolean scenarioActive = true;
-    public static char scenario = 'E';
-
     public static boolean immuneSuppressionEffectThreshold = false;
-
-
-    public static Object tmzTimesteps = null; // Can be "continuous" or List<Integer>
-
 
     public static List<int[]> availableSpaces = new ArrayList<>();
     public static List<int[]> radiatedPixels = new ArrayList<>();
     public static List<int[]> allPixels = new ArrayList<>();
 
+    //Setting file/folder names
     public static final String directory = "HALModeling2024Outs";
     public static final String fileName1 = "TrialRunCounts.csv";
     public static String fullPath1 = directory + fileName1;
@@ -41,30 +37,22 @@ public class Main {
     public static boolean writeGIF = false;
 
 
+    //Input scenario to run
+    public static String scenario = "MB350";
+
+
     public static void main(String[] args) {
         SimulationParameters params = new SimulationParameters(targetPercentage, thresholdPercentage, radius,radiatedPixels, baseRadiationDose, currentRadiationDose, appliedRadiationDose, totalRadiation,centerRadiation,spatialRadiation,immuneSuppressionEffectThreshold, availableSpaces);
 
         System.out.print("Scenario Active: " + scenarioActive);
         if (scenarioActive) {
             System.out.print("    Scenario: " + scenario);
-            new ScenarioParameters(scenario, params);
+
+            new ScenarioParameters(scenario, params, true);
         } else {
             new FigParameters(figure);
         }
-        System.out.println("\nFigure: " + figure + "\nTotal Radiation: " + totalRadiation +
-                "   Center Radiation: " + centerRadiation + "    Spatial Radiation: " + spatialRadiation);
-        if (totalRadiation || centerRadiation || spatialRadiation) {
-            System.out.println("Base Radiation Dose: " + baseRadiationDose + " Gy\nApplied Radiation Dose: " + appliedRadiationDose + " Gy" +
-                    "\nTimesteps Applied: " + radiationTimesteps);
-        }
-        if (centerRadiation) {
-            System.out.println("Center radiation target percentage is " + targetPercentage);
-        } else if (spatialRadiation) {
-            System.out.println("Spatial radiation threshold percentage is " + thresholdPercentage + " and preset radius is " + radius);
-        }
-        if (!immuneSuppressionEffectThreshold) {
-            System.out.println("Immune Suppression Effect: " + FigParameters.immuneSuppressionEffect);
-        }
+
         System.out.println("\nSave Counts to CSV: " + printCounts + "   Save Probabilities to CSV: " + printProbabilities +
                 "   Save GIF (slows code down): " + writeGIF + "\n");
 
@@ -99,13 +87,13 @@ public class Main {
             win.TickPause(1);
 
             if (radiationTimesteps.contains(i) && TumorCells.count > 20) {
-                if (totalRadiation) {
+                if (params.totalRadiation) {
                     radiatedPixels.addAll(allPixels);
                     radiationManager.radiationApplied();
-                } else if (centerRadiation) {
+                } else if (params.centerRadiation) {
                     radiationManager.centerRadiationArea(win, new OnLattice2DGrid(x, y).getTumorCoord());
                     radiationManager.radiationApplied();
-                } else if (spatialRadiation) {
+                } else if (params.spatialRadiation) {
                     radiationManager.spatialRadiationArea(win, new OnLattice2DGrid(x, y).getTumorCoord());
                     radiationManager.radiationApplied();
                 }
@@ -127,6 +115,8 @@ public class Main {
 
 
             if (printCounts) writer.saveCountsToCSV(fullPath1, true, i);
+            writer.saveTumorVolumeToCSV("TumorVolume.csv", true, i, TumorCells.count);
+
             if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i, false);
             if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, true, i);
 
