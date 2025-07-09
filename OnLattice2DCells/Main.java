@@ -115,7 +115,6 @@ public class Main {
 
 
             if (printCounts) writer.saveCountsToCSV(fullPath1, true, i);
-            writer.saveTumorVolumeToCSV("TumorVolume.csv", true, i, TumorCells.count);
 
             if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i, false);
             if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, true, i);

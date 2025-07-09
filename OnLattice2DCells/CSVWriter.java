@@ -125,20 +125,6 @@ public class CSVWriter {
         }
     }
 
-    public void saveTumorVolumeToCSV(String path, boolean append, int timestep, int tumorVolume) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(path, append))) {
-            if (timestep == 1) {
-                writer.write("Timestep,TumorVolume");
-                writer.newLine();
-            }
-            writer.write(timestep + "," + tumorVolume);
-            writer.newLine();
-        } catch (IOException e) {
-            System.err.println("Failed to write TumorVolume CSV: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(0);
-        }
-    }
 
     public void printPopulation(String name, int colorIndex, int count) {
         System.out.println("Population of " + name + " (" + findColor(colorIndex) + "): " + count);
