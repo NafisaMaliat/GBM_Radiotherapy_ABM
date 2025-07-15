@@ -146,7 +146,7 @@ plt.close()
 # ------------------- Saving individual plots treatment-wise --------------
 #
 # if not os.path.exists('TumorVolumePercent.csv'):
-#     print("❌ TumorVolumePercent.csv not found!")
+#     print("TumorVolumePercent.csv not found!")
 #     exit()
 #
 # # Load the tumour volume percentage data
@@ -196,7 +196,7 @@ for scenario in scenarios:
     files = glob.glob(pattern)
 
     if len(files) < 10:
-        print(f"⚠️ Not enough trials for error bar calculation in {scenario}")
+        print(f"Not enough trials for error bar calculation in {scenario}")
         continue
 
     print(f"{scenario}: Found {len(files)} trials")

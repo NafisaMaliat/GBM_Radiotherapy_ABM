@@ -1,27 +1,46 @@
 package OnLattice2DCells;
 
-import java.io.File;
+import java.time.Duration;
+import java.time.Instant;
 
 public class BatchRunner {
 
     public static void main(String[] args) {
         String[] scenarios = {
-                "Control","BB5", "BB10", "BB15",
+                "Control", "BB5", "BB10", "BB15",
                 "MRT200", "MRT400", "MRT600",
-                "MB180", "MB350","Pred_MRT180", "Pred_MRT350","Pred_MB200", "Pred_MB400","Pred_MB600"
+                "MB180", "MB350",
+                "Pred_MRT180", "Pred_MRT350", "Pred_MB200", "Pred_MB400", "Pred_MB600"
         };
 
         int trialsPerScenario = 10;
+        Instant batchStart = Instant.now();
 
         for (String scenario : scenarios) {
             for (int trial = 1; trial <= trialsPerScenario; trial++) {
-                System.out.println("Running Scenario: " + scenario + " | Trial: " + trial);
+                System.out.printf("Running Scenario: %-12s | Trial: %d%n", scenario, trial);
 
-                // Run the simulation
+                Instant trialStart = Instant.now();
+
+                // Run simulation with scenario as argument
                 Main.main(new String[]{scenario});
+
+                Instant trialEnd = Instant.now();
+                Duration trialDuration = Duration.between(trialStart, trialEnd);
+
+                System.out.printf("Finished %s | Trial %d in %d seconds (%d mins)\n\n",
+                        scenario, trial,
+                        trialDuration.getSeconds(),
+                        trialDuration.toMinutes());
             }
         }
 
-        System.out.println("\nAll simulations completed.");
+        Instant batchEnd = Instant.now();
+        Duration totalDuration = Duration.between(batchStart, batchEnd);
+
+        System.out.println("All simulations completed.");
+        System.out.printf("Total time taken: %d seconds (%d minutes)\n",
+                totalDuration.getSeconds(),
+                totalDuration.toMinutes());
     }
 }
