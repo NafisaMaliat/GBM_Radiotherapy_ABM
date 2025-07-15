@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 root_path = '/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs'
 
 # Scenarios you want to include
-scenarios = ['BB5', 'BB10', 'BB15', 'MRT200', 'MRT400', 'MRT600', 'MB180', 'MB350']
+scenarios = ['Control','BB5', 'BB10', 'BB15', 'MRT200', 'MRT400', 'MRT600', 'MB180', 'MB350','Pred_MRT180','Pred_MRT350','Pred_MB200','Pred_MB400','Pred_MB600']
+
 
 
 # ------------------------------------------------------------------------
@@ -186,7 +187,6 @@ BRAIN_VOLUME_MM3 = 2000
 
 # Folder where all trial folders per scenario exist
 root_path = '/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs'
-scenarios = ['BB5', 'BB10', 'BB15', 'MRT200', 'MRT400', 'MRT600', 'MB180', 'MB350','Pred_MRT180','Pred_MRT350','Pred_MB200','Pred_MB400','Pred_MB600']
 output_dir = "IndividualScenarioErrorPlots"
 os.makedirs(output_dir, exist_ok=True)
 

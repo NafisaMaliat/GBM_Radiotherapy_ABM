@@ -41,6 +41,12 @@ public class Main {
 
 
     public static void main(String[] args) {
+
+        // Allow scenario override via args
+        if (args != null && args.length > 0) {
+            scenario = args[0];
+        }
+
         SimulationParameters params = new SimulationParameters(targetPercentage, thresholdPercentage, radius,radiatedPixels, baseRadiationDose, currentRadiationDose, appliedRadiationDose, totalRadiation,centerRadiation,spatialRadiation,immuneSuppressionEffectThreshold, availableSpaces);
 
         System.out.print("Scenario Active: " + scenarioActive);
