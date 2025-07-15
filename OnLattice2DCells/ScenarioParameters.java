@@ -31,7 +31,7 @@ class ScenarioParameters {
         }
         Main.fullPath1 = new File(scenarioFolder, fileNameWithDate).getAbsolutePath();
 
-        if (scenario.equalsIgnoreCase("A") )  // Control, No Radiation, Strong Immune
+        if (scenario.equalsIgnoreCase("Control") )  // Control, No Radiation, Strong Immune
         {
             Main.figure = 2;
             new FigParameters(Main.figure);
@@ -154,7 +154,7 @@ class ScenarioParameters {
             FigParameters.tumorInfiltrationRate = 0.1;
             FigParameters.radiationInducedInfiltration = 50.0 ; //Strong radiation damage leads to higher infiltration
 
-            SimulationParameters.radius = 5; // <- Smaller beams for MRT
+            params.radius = 5; // <- Smaller beams for MRT
         }
         else if (scenario.equalsIgnoreCase("MRT400"))
         {
@@ -174,7 +174,7 @@ class ScenarioParameters {
             FigParameters.tumorInfiltrationRate = 0.1;
             FigParameters.radiationInducedInfiltration = 75.0;
 
-            SimulationParameters.radius = 5; // <- Smaller beams for MRT
+            params.radius = 5; // <- Smaller beams for MRT
         }
         else if (scenario.equalsIgnoreCase("MRT600"))
         {
@@ -193,7 +193,7 @@ class ScenarioParameters {
             FigParameters.tumorInfiltrationRate = 0.1;
             FigParameters.radiationInducedInfiltration = 100.0;
 
-            SimulationParameters.radius = 5; // <- Smaller beams for MRT
+            params.radius = 5; // <- Smaller beams for MRT
         }
         else if (scenario.equalsIgnoreCase("MB180"))
         {
@@ -212,7 +212,7 @@ class ScenarioParameters {
             FigParameters.tumorInfiltrationRate = 0.1;
             FigParameters.radiationInducedInfiltration = 30.0;
 
-            SimulationParameters.radius = 10; // <- Thicker beams
+            params.radius = 10; // <- Thicker beams
         }
         else if (scenario.equalsIgnoreCase("MB350"))
         {
@@ -231,7 +231,102 @@ class ScenarioParameters {
             FigParameters.tumorInfiltrationRate = 0.1;
             FigParameters.radiationInducedInfiltration = 60.0;
 
-            SimulationParameters.radius = 10; // <- Thicker beams
+            params.radius = 10; // <- Thicker beams
+        }
+        else if (scenario.equalsIgnoreCase("Pred_MRT180"))
+        {
+            Main.figure = 3;
+            new FigParameters(Main.figure);
+
+            SimulationParameters.baseRadiationDose = 0;
+            SimulationParameters.appliedRadiationDose = 180;
+            Main.radiationTimesteps = List.of(200);
+
+            params.totalRadiation = false;
+            params.centerRadiation = false;
+            params.spatialRadiation = true;
+
+            FigParameters.immuneSuppressionEffect = 1.1;
+            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.radiationInducedInfiltration = 50.0;
+
+            params.radius = 5;
+        }
+        else if (scenario.equalsIgnoreCase("Pred_MRT350"))
+        {
+            Main.figure = 3;
+            new FigParameters(Main.figure);
+
+            SimulationParameters.baseRadiationDose = 0;
+            SimulationParameters.appliedRadiationDose = 350;
+            Main.radiationTimesteps = List.of(200);
+
+            params.totalRadiation = false;
+            params.centerRadiation = false;
+            params.spatialRadiation = true;
+
+            FigParameters.immuneSuppressionEffect = 1.1;
+            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.radiationInducedInfiltration = 75.0;
+
+            params.radius = 5;
+        }
+        else if (scenario.equalsIgnoreCase("Pred_MB200"))
+        {
+            Main.figure = 3;
+            new FigParameters(Main.figure);
+
+            SimulationParameters.baseRadiationDose = 0;
+            SimulationParameters.appliedRadiationDose = 200;
+            Main.radiationTimesteps = List.of(200);
+
+            params.totalRadiation = false;
+            params.centerRadiation = false;
+            params.spatialRadiation = true;
+
+            FigParameters.immuneSuppressionEffect = 1.1;
+            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.radiationInducedInfiltration = 30.0;
+
+            params.radius = 10; // <- Thicker beams
+        }
+        else if (scenario.equalsIgnoreCase("Pred_MB400"))
+        {
+            Main.figure = 3;
+            new FigParameters(Main.figure);
+
+            SimulationParameters.baseRadiationDose = 0;
+            SimulationParameters.appliedRadiationDose = 400;
+            Main.radiationTimesteps = List.of(200);
+
+            params.totalRadiation = false;
+            params.centerRadiation = false;
+            params.spatialRadiation = true;
+
+            FigParameters.immuneSuppressionEffect = 1.1;
+            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.radiationInducedInfiltration = 60.0;
+
+            params.radius = 10; // <- Thicker beams
+        }
+        else if (scenario.equalsIgnoreCase("Pred_MB600"))
+        {
+            Main.figure = 3;
+            new FigParameters(Main.figure);
+
+            SimulationParameters.baseRadiationDose = 0;
+            SimulationParameters.appliedRadiationDose = 600;
+            Main.radiationTimesteps = List.of(200);
+
+            params.totalRadiation = false;
+            params.centerRadiation = false;
+            params.spatialRadiation = true;
+
+            FigParameters.immuneSuppressionEffect = 1.1;
+            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.radiationInducedInfiltration = 100.0;
+
+            params.radius = 10; // <- Thicker beams
         }
         else {
             System.err.printf("Invalid scenario: %s.%nPlease provide a valid scenario or set 'scenarioActive' to false.%n", scenario);
@@ -247,7 +342,7 @@ class ScenarioParameters {
         if (params.centerRadiation) {
             System.out.println("Center radiation target percentage is " + Main.targetPercentage);
         } else if (params.spatialRadiation) {
-            System.out.println("Spatial radiation threshold percentage is " + Main.thresholdPercentage + " and preset radius is " + SimulationParameters.radius);
+            System.out.println("Spatial radiation threshold percentage is " + Main.thresholdPercentage + " and preset radius is " + params.radius);
         }
         if (!params.immuneSuppressionEffectThreshold) {
             System.out.println("Immune Suppression Effect: " + FigParameters.immuneSuppressionEffect);

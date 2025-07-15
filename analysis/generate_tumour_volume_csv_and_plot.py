@@ -97,6 +97,7 @@ plt.tight_layout()
 
 plt.savefig("TumorVolumeGraph.png", dpi=300)
 plt.show()
+plt.close()
 
 # --------- Plot Tumour Volume as % of Brain ---------
 plt.figure(figsize=(10, 6))
@@ -112,6 +113,7 @@ plt.grid(True)
 plt.tight_layout()
 plt.savefig("TumorVolumePercentGraph.png", dpi=300)
 plt.show()
+plt.close()
 
 # ---------------- PLOT: % Brain Volume after treatment-------------------
 
@@ -138,3 +140,97 @@ plt.grid(True)
 plt.tight_layout()
 plt.savefig("TumorVolumePercent_T200_T300.png", dpi=300)
 plt.show()
+plt.close()
+
+# ------------------- Saving individual plots treatment-wise --------------
+#
+# if not os.path.exists('TumorVolumePercent.csv'):
+#     print("❌ TumorVolumePercent.csv not found!")
+#     exit()
+#
+# # Load the tumour volume percentage data
+# df = pd.read_csv('TumorVolumePercent.csv')
+# print("Columns in dataframe:", df.columns.tolist())
+#
+#
+# # Get the timestep column
+# timesteps = df['Timestep']
+#
+# # Loop through each treatment column and generate a separate plot
+# output_dir = "IndividualScenarioPlots"
+# os.makedirs(output_dir, exist_ok=True)
+#
+# for scenario in df.columns[1:]:  # Skip the 'Timestep' column
+#     plt.figure(figsize=(8, 5))
+#     plt.plot(timesteps, df[scenario], label=scenario, color='blue', marker='o', markersize=2)
+#     plt.title(f"Tumour Volume (% Brain) — {scenario}", fontsize=14)
+#     plt.xlabel("Days", fontsize=12)
+#     plt.ylabel("Tumour Volume (% of Brain)", fontsize=12)
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.legend()
+#     plt.savefig(os.path.join(output_dir, f"{scenario}_TumourVolumePercent.png"), dpi=300)
+#     plt.close()
+#
+# print(f"Saved individual plots in folder: {output_dir}")
+
+
+# ------------------- Saving individual plots treatment-wise with error bars--------------
+
+# Key timesteps you want error bars on (like in the paper)
+selected_timesteps = [212, 220, 230, 240, 250, 260]
+
+# Simulation assumptions
+CELL_VOLUME_MM3 = 0.001
+BRAIN_VOLUME_MM3 = 2000
+
+# Folder where all trial folders per scenario exist
+root_path = '/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs'
+scenarios = ['BB5', 'BB10', 'BB15', 'MRT200', 'MRT400', 'MRT600', 'MB180', 'MB350','Pred_MRT180','Pred_MRT350','Pred_MB200','Pred_MB400','Pred_MB600']
+output_dir = "IndividualScenarioErrorPlots"
+os.makedirs(output_dir, exist_ok=True)
+
+for scenario in scenarios:
+    scenario_folder = os.path.join(root_path, f'Scenario{scenario}')
+    pattern = os.path.join(scenario_folder, 'TrialRunCounts_*.csv')
+    files = glob.glob(pattern)
+
+    if len(files) < 10:
+        print(f"⚠️ Not enough trials for error bar calculation in {scenario}")
+        continue
+
+    print(f"{scenario}: Found {len(files)} trials")
+
+    # Collect data across all trials
+    all_trials = []
+
+    for file in files:
+        df = pd.read_csv(file)
+        df['TumourVolumePercent'] = (df['TumorCells'] * CELL_VOLUME_MM3 / BRAIN_VOLUME_MM3) * 100
+        trial_df = df[['Timestep', 'TumourVolumePercent']].copy()
+        all_trials.append(trial_df)
+
+    # Merge by timestep
+    merged_df = pd.concat(all_trials, axis=0)
+
+    # Group by timestep and aggregate
+    grouped = merged_df.groupby('Timestep')['TumourVolumePercent']
+    mean_series = grouped.mean()
+    std_series = grouped.std()
+
+    # Filter only selected timesteps
+    mean_vals = mean_series.loc[mean_series.index.isin(selected_timesteps)]
+    std_vals = std_series.loc[std_series.index.isin(selected_timesteps)]
+
+    # Plot with error bars
+    plt.figure(figsize=(8, 5))
+    plt.errorbar(mean_vals.index, mean_vals.values, yerr=std_vals.values, fmt='o-', label=scenario, capsize=5)
+    plt.title(f"Tumour Volume (% Brain) with Error Bars — {scenario}")
+    plt.xlabel("Days")
+    plt.ylabel("Tumour Volume (% of Brain)")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig(os.path.join(output_dir, f"{scenario}_ErrorBarPlot.png"), dpi=300)
+    plt.close()
+

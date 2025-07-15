@@ -2,8 +2,7 @@ package OnLattice2DCells;
 
 import HAL.Gui.GifMaker;
 import HAL.Gui.GridWindow;
-import HAL.Rand;
-import HAL.Util;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,12 +32,12 @@ public class Main {
     public static final String fullPath2 = directory + fileName2;
     public static final String fileName3 = "LymphocyteNeighbors.csv";
     public static final String fullPath3 = directory + fileName3;
-    public static final boolean printCounts = true, printProbabilities = true, printNeighbors = true;
+    public static final boolean printCounts = true, printProbabilities = false, printNeighbors = false;
     public static boolean writeGIF = false;
 
 
     //Input scenario to run
-    public static String scenario = "MB350";
+    public static String scenario = "MRT200";
 
 
     public static void main(String[] args) {

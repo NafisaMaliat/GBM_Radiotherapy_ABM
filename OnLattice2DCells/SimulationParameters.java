@@ -5,7 +5,7 @@ import java.util.List;
 public class SimulationParameters {
     public double targetPercentage;
     public double thresholdPercentage;
-    public static int radius;
+    public int radius;
     public List<int[]> radiatedPixels;
     public static int baseRadiationDose, currentRadiationDose , appliedRadiationDose ;
     public boolean totalRadiation, centerRadiation, spatialRadiation;
