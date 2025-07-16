@@ -153,6 +153,6 @@ public class Main {
         System.out.println(java.time.LocalDateTime.now() + " - Simulation execution completed successfully.");
 
         win.Close(); // Close GUI window
-        System.exit(0); // Terminate Java process
+        //System.exit(0); // Terminate Java process
     }
 }

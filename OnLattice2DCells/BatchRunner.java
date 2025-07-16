@@ -23,7 +23,10 @@ public class BatchRunner {
                 Instant trialStart = Instant.now();
 
                 // Run simulation with scenario as argument
+                System.out.printf("▶️ Starting Scenario: %s | Trial: %d%n", scenario, trial);
                 Main.main(new String[]{scenario});
+                System.out.printf("✅ Finished Scenario: %s | Trial: %d%n%n", scenario, trial);
+
 
                 Instant trialEnd = Instant.now();
                 Duration trialDuration = Duration.between(trialStart, trialEnd);
@@ -42,5 +45,7 @@ public class BatchRunner {
         System.out.printf("Total time taken: %d seconds (%d minutes)\n",
                 totalDuration.getSeconds(),
                 totalDuration.toMinutes());
+
+        System.exit(0); // Terminate Java process
     }
 }

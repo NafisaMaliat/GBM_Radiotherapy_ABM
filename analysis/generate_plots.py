@@ -2,6 +2,9 @@ import os
 import glob
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+import numpy as np
+from scipy.stats import linregress
 
 # Path to your root folder
 root_path = '/Users/tanayabowade/Downloads/ABM_GliobMul/HALModeling2024Outs'
@@ -42,106 +45,6 @@ scenarios = ['Control','BB5', 'BB10', 'BB15', 'MRT200', 'MRT400', 'MRT600', 'MB1
 # Assumptions
 CELL_VOLUME_MM3 = 0.001  # Each cell occupies 0.001 mm³
 BRAIN_VOLUME_MM3 = 2000  # Approximate brain volume of male fischer rat in mm³, source 'An MRI-Derived Neuroanatomical Atlas of the Fischer 344 Rat Brain'
-
-tumor_volume_df = pd.DataFrame()
-tumor_volume_percent_df = pd.DataFrame()  # For storing % tumour volume
-
-for scenario in scenarios:
-    scenario_folder = os.path.join(root_path, f'Scenario{scenario}')
-    pattern = os.path.join(scenario_folder, 'TrialRunCounts_*.csv')
-    matching_files = glob.glob(pattern)
-
-    if not matching_files:
-        print(f"No file found for {scenario}")
-        continue
-
-    # Pick latest file by modification time
-    latest_file = max(matching_files, key=os.path.getmtime)
-    print(f"{scenario}: Using file {os.path.basename(latest_file)}")
-
-    df = pd.read_csv(latest_file)
-
-    if 'Timestep' not in df.columns or 'TumorCells' not in df.columns:
-        print(f"Missing columns in {latest_file}, skipping.")
-        continue
-
-    # Compute tumour volume in mm³ and as % of brain
-    tumour_volume_mm3 = df['TumorCells'] * CELL_VOLUME_MM3
-    tumour_volume_percent = (tumour_volume_mm3 / BRAIN_VOLUME_MM3) * 100
-
-    if tumor_volume_df.empty:
-        tumor_volume_df['Timestep'] = df['Timestep']
-        tumor_volume_percent_df['Timestep'] = df['Timestep']
-
-    tumor_volume_df[scenario] = df['TumorCells']
-    tumor_volume_percent_df[scenario] = tumour_volume_percent
-
-# Save both absolute and percentage volume
-tumor_volume_df.to_csv('TumorVolume.csv', index=False)
-tumor_volume_percent_df.to_csv('TumorVolumePercent.csv', index=False)
-print("TumorVolume.csv and TumorVolumePercent.csv saved.")
-
-# --------- Plotting ---------
-plt.figure(figsize=(10, 6))
-
-for scenario in scenarios:
-    if scenario in tumor_volume_df.columns:
-        plt.plot(tumor_volume_df['Timestep'], tumor_volume_df[scenario], label=scenario)
-
-plt.title("Tumour Volume Over Time", fontsize=18)
-plt.xlabel("Timestep", fontsize=14)
-plt.ylabel("Tumour Cells Count", fontsize=14)
-plt.legend(title="Scenario")
-plt.grid(True)
-plt.tight_layout()
-
-plt.savefig("TumorVolumeGraph.png", dpi=300)
-plt.show()
-plt.close()
-
-# --------- Plot Tumour Volume as % of Brain ---------
-plt.figure(figsize=(10, 6))
-for scenario in scenarios:
-    if scenario in tumor_volume_percent_df.columns:
-        plt.plot(tumor_volume_percent_df['Timestep'], tumor_volume_percent_df[scenario], label=scenario)
-
-plt.title("Tumour Volume (% Brain) Over Time", fontsize=18)
-plt.xlabel("Days", fontsize=14)
-plt.ylabel("Tumour Volume (% of Brain)", fontsize=14)
-plt.legend(title="Scenario")
-plt.grid(True)
-plt.tight_layout()
-plt.savefig("TumorVolumePercentGraph.png", dpi=300)
-plt.show()
-plt.close()
-
-# ---------------- PLOT: % Brain Volume after treatment-------------------
-
-start_timestep = 200
-end_timestep = 300
-
-# Filter for range 200–300
-# Create a filtered copy, keeping original intact
-tumor_volume_percent_df_filtered = tumor_volume_percent_df[
-    (tumor_volume_percent_df['Timestep'] >= start_timestep) &
-    (tumor_volume_percent_df['Timestep'] <= end_timestep)
-    ].reset_index(drop=True)
-
-plt.figure(figsize=(10, 6))
-for scenario in scenarios:
-    if scenario in tumor_volume_percent_df_filtered.columns:
-        plt.plot(tumor_volume_percent_df_filtered['Timestep'], tumor_volume_percent_df_filtered[scenario], label=scenario)
-
-plt.title("Tumour Volume (% Brain) — Timestep 200–300", fontsize=18)
-plt.xlabel("Timestep", fontsize=14)
-plt.ylabel("Tumour Volume (% of Brain)", fontsize=14)
-plt.legend(title="Scenario")
-plt.grid(True)
-plt.tight_layout()
-plt.savefig("TumorVolumePercent_T200_T300.png", dpi=300)
-plt.show()
-plt.close()
-
 
 
 # -------------------- All plots together with error bars from timetep 200-300 -----------------------
@@ -257,4 +160,87 @@ for scenario in scenarios:
     plt.legend()
     plt.savefig(os.path.join(output_dir, f"{scenario}_ErrorBarPlot.png"), dpi=300)
     plt.close()
+
+
+
+# ------------------------- Calculating ABM graphs' slopes -----------
+
+# Construct dataframe
+df = pd.DataFrame(scenario_means)
+df = df.reset_index()  # 'Timestep' becomes a column
+
+# Define the range to fit slope
+start = 212
+end = 260
+selected_range = (df['Timestep'] >= start) & (df['Timestep'] <= end)
+
+abm_slopes = {}
+
+for scenario in df.columns[1:]:  # Skip 'Timestep'
+    y = df.loc[selected_range, scenario].values
+    x = df.loc[selected_range, 'Timestep'].values.reshape(-1, 1)
+
+    model = LinearRegression().fit(x, y)
+    slope = model.coef_[0]
+    abm_slopes[scenario] = slope * 100  # Convert to % per day
+
+# Display
+print("\n📈 Estimated tumour growth slope (% per day) from ABM between Day 212–260:\n")
+for scenario, slope in abm_slopes.items():
+    print(f"{scenario}: {slope:.4f}%")
+
+# ----------- Calculating clinical trial slope -------------
+
+# Provided coordinates (x = survival days, y = tumour volume %)
+data = {
+    "Control": [(12, 2), (20, 12), (24, 18)],
+    "BB5": [(12, 2), (21, 20)],
+    "BB10": [(12, 2), (28, 15), (38, 28)],
+    "BB15": [(12, 2), (42, 25)],
+    "MB180": [(12, 2), (25, 10), (29, 13)],
+    "MRT200": [(12, 2), (21, 2), (26, 14), (29, 15)],
+    "MRT400": [(12, 2), (49, 68), (57, 40), (62, 0)],
+    "MRT600": [(12, 2), (54, 18), (62, 0)]
+}
+
+clinical_slopes = {}
+plt.figure(figsize=(10, 6))
+
+# Plot each treatment and compute slope
+for treatment, points in data.items():
+    x, y = zip(*points)
+    slope, intercept, r_value, p_value, std_err = linregress(x, y)
+    clinical_slopes[treatment] = slope
+    plt.plot(x, y, marker='o', label=f"{treatment} (slope={slope:.2f})")
+
+# Graph formatting
+plt.title("Tumour Volume Growth Slopes (Clinical Data)")
+plt.xlabel("Survival Days")
+plt.ylabel("Tumour Volume (%)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+# Display slopes
+slope_df = pd.DataFrame(clinical_slopes.items(), columns=["Treatment", "Slope"])
+
+print(slope_df)
+
+# -------------- Comparing slopes Clinical vs ABM --------------------
+
+treatments = clinical_slopes.keys()
+x = np.arange(len(treatments))
+
+plt.figure(figsize=(10, 5))
+plt.bar(x - 0.15, [clinical_slopes[t] for t in treatments], width=0.3, label='Clinical')
+plt.bar(x + 0.15, [abm_slopes[t] for t in treatments], width=0.3, label='ABM')
+plt.xticks(x, treatments)
+plt.ylabel("Tumour Growth Slope (%/day)")
+plt.title("Comparison of Tumour Growth Slopes (Clinical vs ABM)")
+plt.legend()
+plt.tight_layout()
+plt.savefig("SlopeComparison.png")
+plt.show()
+plt.close()
+
 
