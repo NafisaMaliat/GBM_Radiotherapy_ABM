@@ -1,10 +1,6 @@
 
 # ABM_GliobMul: Agent‑Based Model of Glioblastoma Growth & Radiotherapy Response
 
-**Tanaya Jayprakash Bowade**  
-Master of Science (Data Science), University of Roehampton  
-August 2025
-
 ---
 
 ## Overview
