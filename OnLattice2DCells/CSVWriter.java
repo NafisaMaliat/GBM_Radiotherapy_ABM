@@ -18,14 +18,22 @@ public class CSVWriter {
                 writer.write("Timestep,Lymphocytes,TriggeringCells,TumorCells,TumorCellsRad,DoomedCells," +
                         "DoomedCellsRad,Lymphocytes DieProb,Tumor DieProbRad,Tumor DieProbImm,Tumor DivProb," +
                         "SurvivingFractionTLast,PrimaryImmuneResponse,SecondaryImmuneResponse,ImmuneResponse," +
-                        "LymphocyteMigrationAttempted,ImmuneSuppression");
+                        "LymphocyteMigrationAttempted,ImmuneSuppression," +
+                        "TumorClone0,TumorClone1,TumorClone2," +
+                        "TumorClone0Rad,TumorClone1Rad,TumorClone2Rad");
                 writer.newLine();
             }
             writer.write(timestep + "," + Lymphocytes.count + "," + TriggeringCells.count + "," + TumorCells.count + "," + TumorCells.countRad + "," +
                     DoomedCells.count + "," + DoomedCells.countRad + "," + Lymphocytes.dieProb + "," + TumorCells.dieProbRad + "," +
                     TumorCells.dieProbImm + "," + TumorCells.divProb + "," + TriggeringCells.SurvivingFractionTLast + "," +
                     OnLattice2DGrid.primaryImmuneResponse + "," + OnLattice2DGrid.secondaryImmuneResponse + "," +
-                    OnLattice2DGrid.immuneResponse + "," + OnLattice2DGrid.newLymphocytesAttempted + "," + FigParameters.immuneSuppressionEffect);
+                    OnLattice2DGrid.immuneResponse + "," + OnLattice2DGrid.newLymphocytesAttempted + "," + FigParameters.immuneSuppressionEffect + "," +
+                    TumorCells.cloneCount[0] + "," +
+                    TumorCells.cloneCount[1] + "," +
+                    TumorCells.cloneCount[2] + "," +
+                    TumorCells.cloneCountRad[0] + "," +
+                    TumorCells.cloneCountRad[1] + "," +
+                    TumorCells.cloneCountRad[2]);
             writer.newLine();
         } catch (IOException e) {
             System.err.println("Failed to write CSV file: " + e.getMessage());

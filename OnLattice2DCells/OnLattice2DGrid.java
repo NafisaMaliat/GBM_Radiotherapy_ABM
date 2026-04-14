@@ -22,6 +22,9 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
     public static List<int[]> triggeringSpaces = new ArrayList<>();
     public static List<int[]> lymphocyteSpaces = new ArrayList<>();
     public static int[][] lymphocyteNeighbors;
+    // Persists the radiation-induced immune activation signal across timesteps.
+    // Set to 1.0 when radiation is applied; decays by immuneSignalDecayRate each timestep.
+    public static double postRadiationSignal = 0.0;
 
 
 
@@ -41,6 +44,9 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
      * @param params The SimulationParameters instance containing the configuration parameters for the simulation, such as radiation settings, cell populations, and probabilities
      * .
      */
+
+
+
     public void Init(GridWindow win, OnLattice2DGrid model, SimulationParameters params) {
 
         if ((params.totalRadiation && params.centerRadiation) ||
@@ -77,9 +83,11 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         }
 
         lymphocyteNeighbors = new int[model.xDim][model.yDim];
+        postRadiationSignal = 0.0;
         int lymphocitePopulation = 0;
-        int tumorSize = 1;
+        int tumorSize = TumorCells.NUM_CLONES; // one seed cell per clone
         int triggeringPopulation = 500;
+
         if (lymphocitePopulation + tumorSize + triggeringPopulation > model.xDim * model.yDim) {
             System.err.println("Error: Number of cells exceeds grid size.\n" +
                     "Maximum Grid Capacity: " + (model.xDim * model.yDim) + " cells");
@@ -101,31 +109,57 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         if (params.immuneSuppressionEffectThreshold) {
             CellFunctions.getImmuneSuppressionEffectThreshold(Lymphocytes.count <= 1);
         }
+
+        // Nafisa
         CellFunctions.getImmuneResponse();
-        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.baseRadiationDose);
-        TumorCells.count -= tumorSize;
+        double[] Tvalues = CellFunctions.getTumorCellsProb(
+                SimulationParameters.baseRadiationDose,
+                0 // baseline clone
+        );        TumorCells.count -= tumorSize;
         TumorCells.dieProbRad = Tvalues[0];
         TumorCells.dieProbImm = Tvalues[1];
         TumorCells.divProb = Tvalues[2];
 
-        if (tumorSize > 0) {
-            model.NewAgentSQ(model.xDim / 2, model.yDim / 2).Init(CellFunctions.Type.TUMOR, params);
+// --- Seed one cell per clone, spread around the grid centre ---
+// Each clone starts at its own position so it can grow outward freely
+// (a compact multi-cell cluster causes immediate contact inhibition).
+        int cx = model.xDim / 2;
+        int cy = model.yDim / 2;
+
+        // Offset positions so the three seed cells are not adjacent to each other
+        int[][] seedPositions = {
+                {cx,     cy    },   // Clone 0 – Baseline
+                {cx + 4, cy    },   // Clone 1 – Proliferative
+                {cx,     cy + 4},   // Clone 2 – InvasiveResistant
+        };
+
+        for (int cloneIdx = 0; cloneIdx < TumorCells.NUM_CLONES; cloneIdx++) {
+            int sx = seedPositions[cloneIdx][0];
+            int sy = seedPositions[cloneIdx][1];
+            CellFunctions seed = model.NewAgentSQ(sx, sy);
+            seed.cloneId = cloneIdx;
+            seed.Init(CellFunctions.Type.TUMOR, params);
             TumorCells.count++;
         }
-        if (tumorSize > 1) {
-            for (int i = 0; i < tumorSize; i++) {
-                for (CellFunctions cell : this) {
-                    cell.mapEmptyHood(params);
-                    if (TumorCells.count == tumorSize) {
-                        i = tumorSize;
-                        break;
-                    }
+        // Initialise count and cloneCount[] from the actual grid state (one-time scan at startup)
+        TumorCells.count = 0;
+        for (CellFunctions cell : this) {
+            if (cell.type == CellFunctions.Type.TUMOR) {
+                int c = cell.cloneId;
+                if (c >= 0 && c < TumorCells.NUM_CLONES) {
+                    TumorCells.count++;
+                    TumorCells.cloneCount[c]++;
                 }
             }
         }
+        System.out.println("Initial tumour clone counts:");
+        for (int i = 0; i < TumorCells.NUM_CLONES; i++) {
+            System.out.println("  Clone " + i + " (" + TumorCells.cloneNames[i] + "): " + TumorCells.cloneCount[i]);
+        }
+
 
         double[] Avalues = CellFunctions.getTriggeringCellsProb(SimulationParameters.baseRadiationDose);
-        TriggeringCells.dieProb = Avalues[1];
+        TriggeringCells.dieProb = Avalues[0];
         TriggeringCells.activateProb = Avalues[1];
         if (triggeringPopulation > 0) {
             updateSpaces(win, params);
@@ -143,16 +177,23 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
      * @param params The SimulationParameters instance containing the configuration
      *               parameters required for the cells' behavior during the simulation step.
      */
-    public void StepCells(OnLattice2DGrid model , SimulationParameters params) {
+
+    // Nafisa
+    public void StepCells(OnLattice2DGrid model, SimulationParameters params) {
         triggeringDied = false;
-        for (CellFunctions cell : this) //this is a for-each loop, "this" refers to this grid
+
+        // 1) advance each cell by one timestep
+        for (CellFunctions cell : this)  //this is a for-each loop, "this" refers to this grid
         {
             cell.StepCell(params);
         }
+
+        // 2) triggering cell logic (unchanged)
         if (TriggeringCells.count > 0 && !triggeringDied) {
             new CellFunctions().disposeRandomTriggering(model);
         }
     }
+
 
     /**
      * Updates the classification of spaces in the simulation grid.
@@ -203,16 +244,19 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
      */
     public void DrawModelandUpdateProb(GridWindow win, GifMaker gif, SimulationParameters params) {
         int color;
+        double tumorDieProbRadSum = 0;
+        double tumorDieProbImmSum = 0;
+        double tumorDivProbSum = 0;
+        int tumorCellCount = 0;
+
+        // Decay post-radiation immune signal each timestep
+        postRadiationSignal *= (1.0 - FigParameters.immuneSignalDecayRate);
 
         if (params.immuneSuppressionEffectThreshold) {
             CellFunctions.getImmuneSuppressionEffectThreshold(Lymphocytes.count <= 1);
         }
         CellFunctions.getImmuneResponse();
 
-        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.baseRadiationDose);
-        TumorCells.dieProbRad = Tvalues[0];
-        TumorCells.dieProbImm = Tvalues[1];
-        TumorCells.divProb = Tvalues[2];
         double[] Avalues = CellFunctions.getTriggeringCellsProb(SimulationParameters.baseRadiationDose);
         TriggeringCells.dieProb = Avalues[0];
         TriggeringCells.activateProb = Avalues[1];
@@ -222,10 +266,15 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             if (cell != null) {
                 color = cell.color;
                 if (cell.type == CellFunctions.Type.TUMOR) {
-                    cell.dieProbRad = TumorCells.dieProbRad;
-                    cell.dieProbImm = TumorCells.dieProbImm;
-                    cell.divProb = TumorCells.divProb;
-                    //If radiating twice in a row, this is not needed only for tumor cells in the circle. But not worth writing code for.
+                    double[] probs = CellFunctions.getTumorCellsProb(cell.radiationDose, cell.cloneId);
+                    cell.dieProbRad = probs[0];
+                    cell.dieProbImm = probs[1];
+                    cell.divProb = probs[2];
+
+                    tumorDieProbRadSum += probs[0];
+                    tumorDieProbImmSum += probs[1];
+                    tumorDivProbSum += probs[2];
+                    tumorCellCount++;
                 } else if (cell.type == CellFunctions.Type.TRIGGERING) {
                     cell.dieProb = TriggeringCells.dieProb;
                     cell.activateProb = TriggeringCells.activateProb;
@@ -234,6 +283,15 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
                 color = Util.BLACK;
             }
             win.SetPix(i, color);
+        }
+        if (tumorCellCount > 0) {
+            TumorCells.dieProbRad = tumorDieProbRadSum / tumorCellCount;
+            TumorCells.dieProbImm = tumorDieProbImmSum / tumorCellCount;
+            TumorCells.divProb = tumorDivProbSum / tumorCellCount;
+        } else {
+            TumorCells.dieProbRad = 0;
+            TumorCells.dieProbImm = 0;
+            TumorCells.divProb = 0;
         }
         if (Main.writeGIF) gif.AddFrame(win);
     }
@@ -253,11 +311,17 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
      *         - y-coordinate of the center of the tumor region.
      */
     public int[] getTumorCoord() {
-        int minX = tumorSpaces.get(0)[0];
-        int maxX = tumorSpaces.get(tumorSpaces.size() - 1)[0];
+        if (tumorSpaces.isEmpty()) {
+            return null;
+        }
+
+        int minX = xDim;
+        int maxX = 0;
         int minY = yDim;
         int maxY = 0;
         for (int[] tumorCell : tumorSpaces) {
+            if (tumorCell[0] < minX) minX = tumorCell[0];
+            if (tumorCell[0] > maxX) maxX = tumorCell[0];
             if (tumorCell[1] < minY) minY = tumorCell[1];
             if (tumorCell[1] > maxY) maxY = tumorCell[1];
         }

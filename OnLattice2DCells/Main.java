@@ -27,17 +27,17 @@ public class Main {
     //Setting file/folder names
     public static final String directory = "HALModeling2024Outs";
     public static final String fileName1 = "TrialRunCounts.csv";
-    public static String fullPath1 = directory + fileName1;
+    public static String fullPath1 = directory + "/" + fileName1;
     public static final String fileName2 = "TrialRunProbabilities.csv";
-    public static final String fullPath2 = directory + fileName2;
+    public static final String fullPath2 = directory +  "/" + fileName2;
     public static final String fileName3 = "LymphocyteNeighbors.csv";
-    public static final String fullPath3 = directory + fileName3;
+    public static final String fullPath3 = directory +  "/" + fileName3;
     public static final boolean printCounts = true, printProbabilities = false, printNeighbors = false;
     public static boolean writeGIF = false;
 
 
     //Input scenario to run
-    public static String scenario = "MRT200";
+    public static String scenario = "MRT400";
 
 
     public static void main(String[] args) {
@@ -47,7 +47,18 @@ public class Main {
             scenario = args[0];
         }
 
-        SimulationParameters params = new SimulationParameters(targetPercentage, thresholdPercentage, radius,radiatedPixels, baseRadiationDose, currentRadiationDose, appliedRadiationDose, totalRadiation,centerRadiation,spatialRadiation,immuneSuppressionEffectThreshold, availableSpaces);
+        SimulationParameters params = new SimulationParameters(
+                targetPercentage,
+                thresholdPercentage,
+                radius,radiatedPixels,
+                baseRadiationDose,
+                currentRadiationDose,
+                appliedRadiationDose,
+                totalRadiation,
+                centerRadiation,
+                spatialRadiation,
+                immuneSuppressionEffectThreshold,
+                availableSpaces );
 
         System.out.print("Scenario Active: " + scenarioActive);
         if (scenarioActive) {
@@ -63,18 +74,22 @@ public class Main {
 
         int x = 100;
         int y = 100;
-        int timesteps = 1000;
+        int timesteps = 540;// 540 days is the survival with treatment [https://www.thebraintumourcharity.org/brain-tumour-diagnosis-treatment/types-of-brain-tumour-adult/glioblastoma/glioblastoma-prognosis/]
+
         GridWindow win = new GridWindow(x, y, 5);
         OnLattice2DGrid model = new OnLattice2DGrid(x, y);
+
+        // cache all pixel coordinates for total-radiation mode
         for (int i = 0; i < model.xDim; i++) {
             for (int j = 0; j < model.yDim; j++) {
                 allPixels.add(new int[]{i, j});
             }
         }
+
         RadiationManager radiationManager = new RadiationManager(model, params);
 
         new Lymphocytes().Lymphocytes();
-        new TumorCells().TumorCells();
+        TumorCells.resetCounts();
         new DoomedCells().DoomedCells();
         new TriggeringCells().TriggeringCells();
 
@@ -86,21 +101,28 @@ public class Main {
         if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, false, 0, false);
         if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, false, 0);
 
-        GifMaker gif = new GifMaker(directory + "TrialRunGif.gif", 1, false);
+        GifMaker gif = new GifMaker(directory + "/TrialRunGif.gif", 1, false);
 
         for (int i = 1; i <= timesteps; i++) {
             win.TickPause(1);
 
+            // Radiation application
             if (radiationTimesteps.contains(i) && TumorCells.count > 20) {
                 if (params.totalRadiation) {
                     radiatedPixels.addAll(allPixels);
                     radiationManager.radiationApplied();
                 } else if (params.centerRadiation) {
-                    radiationManager.centerRadiationArea(win, new OnLattice2DGrid(x, y).getTumorCoord());
-                    radiationManager.radiationApplied();
+                    int[] tumorCoord = model.getTumorCoord();
+                    if (tumorCoord != null) {
+                        radiationManager.centerRadiationArea(win, tumorCoord);
+                        radiationManager.radiationApplied();
+                    }
                 } else if (params.spatialRadiation) {
-                    radiationManager.spatialRadiationArea(win, new OnLattice2DGrid(x, y).getTumorCoord());
-                    radiationManager.radiationApplied();
+                    int[] tumorCoord = model.getTumorCoord();
+                    if (tumorCoord != null) {
+                        radiationManager.spatialRadiationArea(win, tumorCoord);
+                        radiationManager.radiationApplied();
+                    }
                 }
                 if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i, true);
 
@@ -109,8 +131,8 @@ public class Main {
                 radiatedPixels.clear();
             }
 
+            // Core dynamics
             model.StepCells(model, params);
-
             model.updateSpaces(win,params);
 
             // Lymphocyte Migration
@@ -123,12 +145,14 @@ public class Main {
 
             if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i, false);
             if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, true, i);
-
-            if (i == timesteps) writeGIF = true;
+            if (i == timesteps) {
+                writeGIF = true;   // only start saving frames at the very last step block
+            }
             model.DrawModelandUpdateProb(win, gif, params); //get occupied spaces to use for stepCells method, rerun if model pop goes to 0
 
-            //if (model.Pop() == 0)
-            if (TumorCells.count == 0) {
+            if (model.Pop() == 0)
+
+             if (TumorCells.count == 0) {
                 System.out.println("Timestep tumor population reached 0: " + i + "\n");
                 break;
                 /*model.Init(win, model);

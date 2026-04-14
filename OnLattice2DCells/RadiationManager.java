@@ -157,8 +157,10 @@ public class RadiationManager {
 
     public void radiationApplied() {
         SimulationParameters.currentRadiationDose = SimulationParameters.appliedRadiationDose;
+        // Trigger persistent immune activation signal (decays over subsequent timesteps)
+        OnLattice2DGrid.postRadiationSignal = 1.0;
         double LDieProb = CellFunctions.getLymphocytesProb(SimulationParameters.currentRadiationDose);
-        double[] Tvalues = CellFunctions.getTumorCellsProb(SimulationParameters.currentRadiationDose);
+// Tumour probabilities will be computed per cell (clone-specific) inside the loop
         double[] Avalues = CellFunctions.getTriggeringCellsProb(SimulationParameters.currentRadiationDose);
 
         for (int[] pixel : params.radiatedPixels) {
@@ -168,13 +170,22 @@ public class RadiationManager {
                 if (cell.type == CellFunctions.Type.LYMPHOCYTE) {
                     cell.dieProb = LDieProb;
                 } else if (cell.type == CellFunctions.Type.TUMOR) {
+                    // clone-specific tumour probabilities during radiation
+                    int cloneId = cell.cloneId;
+                    double[] Tvalues = CellFunctions.getTumorCellsProb(
+                            SimulationParameters.currentRadiationDose,
+                            cloneId
+                    );
                     cell.dieProbRad = Tvalues[0];
                     cell.dieProbImm = Tvalues[1];
-                    cell.divProb = Tvalues[2];
+                    cell.divProb    = Tvalues[2];
+
                     if (!cell.radiated) {
                         TumorCells.countRad++;
+                        TumorCells.cloneCountRad[cloneId]++;
                     }
-                } else if (cell.type == CellFunctions.Type.TRIGGERING) {
+                }
+                else if (cell.type == CellFunctions.Type.TRIGGERING) {
 
                     cell.dieProb = Avalues[0];
                     cell.activateProb = Avalues[1];
@@ -193,6 +204,12 @@ public class RadiationManager {
                 cell.radiationDose = SimulationParameters.currentRadiationDose;
                 if (cell.type == CellFunctions.Type.LYMPHOCYTE) {
                     cell.dieProb = Lymphocytes.dieProb;
+                } else if (cell.type == CellFunctions.Type.TUMOR) {
+                    if (cell.radiated) {
+                        TumorCells.countRad--;
+                        TumorCells.cloneCountRad[cell.cloneId]--;
+                    }
+                    cell.radiated = false;
                 }
             }
         }

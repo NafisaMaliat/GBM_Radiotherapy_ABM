@@ -33,12 +33,12 @@ class ScenarioParameters {
 
         if (scenario.equalsIgnoreCase("Control") )  // Control, No Radiation, Strong Immune
         {
-            Main.figure = 2;
+            Main.figure = 3;
             new FigParameters(Main.figure);
             params.totalRadiation = false;
             params.centerRadiation = false;
             params.spatialRadiation = false;
-            FigParameters.immuneSuppressionEffect = 0.031;
+            FigParameters.immuneSuppressionEffect = 0.51; // 0.031 if immune needs to be stronger
         } else if (scenario.equalsIgnoreCase("B"))  // Control, No Radiation, Weak Immune
         {
             Main.figure = 3;
@@ -96,8 +96,8 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = false;
 
-            FigParameters.immuneSuppressionEffect = 0.51;   // 0.51 because in BB treatments (e.g., BB5, BB10), the tumour is not heavily damaged
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
+            // tumorInfiltrationRate kept at FigParameters default (0.5) — same patient biology as Control
             FigParameters.radiationInducedInfiltration = 2.0;
 
         }
@@ -115,7 +115,6 @@ class ScenarioParameters {
             params.spatialRadiation = false;
 
             FigParameters.immuneSuppressionEffect = 0.51;
-            FigParameters.tumorInfiltrationRate = 0.1;
             FigParameters.radiationInducedInfiltration = 2.0;
 
         }
@@ -133,7 +132,6 @@ class ScenarioParameters {
             params.spatialRadiation = false;
 
             FigParameters.immuneSuppressionEffect = 0.51;
-            FigParameters.tumorInfiltrationRate = 0.1;
             FigParameters.radiationInducedInfiltration = 2.0;
 
         }
@@ -150,9 +148,11 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1; // 1.1 because MRT and MB cause extensive physical damage to tumour cells and vasculature.
-            FigParameters.tumorInfiltrationRate = 0.1;
-            FigParameters.radiationInducedInfiltration = 50.0 ; //Strong radiation damage leads to higher infiltration
+            // immuneSuppressionEffect = 0.51 (same as Control/BB) — same tumour biology,
+            // only radiation treatment differs (required for valid Romano et al. comparison).
+            // tumorInfiltrationRate kept at FigParameters default (0.5) — same baseline as Control.
+            FigParameters.immuneSuppressionEffect = 0.51;
+            FigParameters.radiationInducedInfiltration = 50.0; // Strong radiation damage → higher infiltration
 
             params.radius = 5; // <- Smaller beams for MRT
         }
@@ -170,8 +170,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 75.0;
 
             params.radius = 5; // <- Smaller beams for MRT
@@ -189,8 +188,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 100.0;
 
             params.radius = 5; // <- Smaller beams for MRT
@@ -208,8 +206,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 30.0;
 
             params.radius = 10; // <- Thicker beams
@@ -227,8 +224,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 60.0;
 
             params.radius = 10; // <- Thicker beams
@@ -246,8 +242,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 50.0;
 
             params.radius = 5;
@@ -265,8 +260,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 75.0;
 
             params.radius = 5;
@@ -284,8 +278,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 30.0;
 
             params.radius = 10; // <- Thicker beams
@@ -303,8 +296,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 60.0;
 
             params.radius = 10; // <- Thicker beams
@@ -322,8 +314,7 @@ class ScenarioParameters {
             params.centerRadiation = false;
             params.spatialRadiation = true;
 
-            FigParameters.immuneSuppressionEffect = 1.1;
-            FigParameters.tumorInfiltrationRate = 0.1;
+            FigParameters.immuneSuppressionEffect = 0.51;
             FigParameters.radiationInducedInfiltration = 100.0;
 
             params.radius = 10; // <- Thicker beams

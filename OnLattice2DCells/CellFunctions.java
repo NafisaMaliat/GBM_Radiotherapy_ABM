@@ -18,6 +18,11 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     Double divProb;
     Double activateProb;
 
+    // Clone identity for tumour heterogeneity
+    // 0 = Baseline, 1 = Proliferative, 2 = Invasive/Resistant
+    int cloneId = 0;
+
+
 
     public enum Type {
         LYMPHOCYTE,
@@ -48,8 +53,17 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
             this.dieProbImm = null;
             this.divProb = null;
             this.activateProb = null;
+
         } else if (type == Type.TUMOR) {
-            this.color = Util.CategorialColor(TumorCells.colorIndex);
+            // If cloneId wasn't set yet, default to baseline (0),
+            // otherwise keep whatever was already assigned.
+            if (this.cloneId < 0 || this.cloneId >= TumorCells.NUM_CLONES) {
+                this.cloneId = 0;  // default baseline only if invalid
+            }
+
+            // Colour based on clone id (so that heterogeneity can be seen visually)
+            this.color = Util.CategorialColor(TumorCells.cloneColorIndex[this.cloneId]);
+
             this.dieProb = null;
             this.dieProbRad = TumorCells.dieProbRad;
             this.dieProbImm = TumorCells.dieProbImm;
@@ -82,43 +96,60 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
     public void StepCell(SimulationParameters params) {
         if (this.type == Type.LYMPHOCYTE) {
+
             if (G.rng.Double() < this.dieProb) {
                 Lymphocytes.count--;
                 Dispose();
                 int[] space = {this.Xsq(), this.Ysq()};
                 reduceLymphocyteDensity(G, space);
             }
+
         } else if (this.type == Type.TUMOR) {
-            // Update probabilities based on local oxygen
+
+            // Clone-specific behaviour: each clone has its own growth/RT/immune response
             assert G != null;
 
-            double[] probs = CellFunctions.getTumorCellsProb(this.radiationDose);
+            int c = this.cloneId;
+            double[] probs = CellFunctions.getTumorCellsProb(this.radiationDose, c);
+
             this.dieProbRad = probs[0];
             this.dieProbImm = probs[1];
-            this.divProb = probs[2];
+            this.divProb    = probs[2];
 
+            // one random draw to decide outcome
+            double r = G.rng.Double();
 
-
-            if (G.rng.Double() < this.dieProbRad) {
+            if (r < this.dieProbRad) {
+                // death from radiation
                 if (this.radiated) {
                     TumorCells.countRad--;
+                    TumorCells.cloneCountRad[c]--;
                 }
+                TumorCells.cloneCount[c]--;
                 this.InitDoomed(true);
                 TumorCells.count--;
                 DoomedCells.count++;
                 DoomedCells.countRad++;
-            } else if (G.rng.Double() < (this.dieProbRad + this.dieProbImm)) {
+
+            } else if (r < this.dieProbRad + this.dieProbImm) {
+                // death from immune
                 if (this.radiated) {
                     TumorCells.countRad--;
+                    TumorCells.cloneCountRad[c]--;
                 }
+                TumorCells.cloneCount[c]--;
                 this.InitDoomed(false);
                 TumorCells.count--;
                 DoomedCells.count++;
                 DoomedCells.countImm++;
-            } else if (G.rng.Double() < (this.dieProbRad + this.dieProbImm + this.divProb)) {
+
+            } else if (r < this.dieProbRad + this.dieProbImm + this.divProb) {
+                // division
                 mapEmptyHood(params);
             }
+
         } else if (this.type == Type.DOOMED) {
+
             if (G.rng.Double() < this.dieProb) {
                 Dispose();
                 DoomedCells.count--;
@@ -128,12 +159,13 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
                     DoomedCells.countImm--;
                 }
             }
+
         } else if (this.type == Type.TRIGGERING) {
+
             if (G.rng.Double() < this.dieProb) {
                 Dispose();
                 TriggeringCells.count--;
                 OnLattice2DGrid.triggeringDied = true;
-                ;
             } else if (G.rng.Double() < (this.dieProb + this.activateProb)) {
                 Dispose();
                 TriggeringCells.count--;
@@ -142,13 +174,27 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         }
     }
 
+
+
     public void mapEmptyHood(SimulationParameters params) {
         int options = MapEmptyHood(G.divHood);
         if (options > 0) {
-            G.NewAgentSQ(G.divHood[G.rng.Int(options)]).Init(Type.TUMOR, params);
+            int iNew = G.divHood[G.rng.Int(options)];
+
+            // Create new tumour cell
+            CellFunctions daughter = G.NewAgentSQ(iNew);
+
+            // Inherit clone from parent BEFORE Init
+            daughter.cloneId = this.cloneId;
+
+            // Initialise as tumour – Init will set colour etc. using cloneId
+            daughter.Init(Type.TUMOR, params);
+
             TumorCells.count++;
+            TumorCells.cloneCount[daughter.cloneId]++;
         }
     }
+
 
     public void disposeRandomTriggering(OnLattice2DGrid model) {
         Collections.shuffle(OnLattice2DGrid.triggeringSpaces);
@@ -205,13 +251,27 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
     public void lymphocyteMigration(OnLattice2DGrid G, GridWindow win, SimulationParameters params) {
         double volumeDamagedTumorCells = (double) DoomedCells.countRad / (DoomedCells.count + TumorCells.count);
+        // Clone-weighted surviving fraction: irradiated cells use currentDose, others use baseDose (SF=1.0)
+        // Use active dose when radiation is on; otherwise use the decaying post-radiation signal.
+        // This sustains immune activation for ~50-100 timesteps after radiation, reflecting
+        // the persistence of danger signals (DAMPs, cytokines) in vivo.
+        double doseForActivation = (SimulationParameters.currentRadiationDose > 0)
+                ? SimulationParameters.currentRadiationDose
+                : SimulationParameters.appliedRadiationDose * OnLattice2DGrid.postRadiationSignal;
+
         double survivingFractionT;
-        if (SimulationParameters.currentRadiationDose == SimulationParameters.baseRadiationDose) {
-            survivingFractionT = getSurvivingFraction(SimulationParameters.baseRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
+        if (TumorCells.count > 0) {
+            double sfWeightedSum = 0;
+            for (int c = 0; c < TumorCells.NUM_CLONES; c++) {
+                double alpha = FigParameters.radiationSensitivityOfTumorCellsAlpha * FigParameters.cloneAlphaMultiplier[c];
+                double beta  = FigParameters.radiationSensitivityOfTumorCellsBeta  * FigParameters.cloneBetaMultiplier[c];
+                double sfRad = getSurvivingFraction(doseForActivation, alpha, beta);
+                sfWeightedSum += TumorCells.cloneCountRad[c] * sfRad
+                               + (TumorCells.cloneCount[c] - TumorCells.cloneCountRad[c]) * 1.0;
+            }
+            survivingFractionT = sfWeightedSum / TumorCells.count;
         } else {
-            double survivingFractionTUnradiated = getSurvivingFraction(SimulationParameters.baseRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
-            double survivingFractionTRadiated = getSurvivingFraction(SimulationParameters.currentRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
-            survivingFractionT = (TumorCells.countRad * survivingFractionTRadiated + (TumorCells.count - TumorCells.countRad) * survivingFractionTUnradiated) / TumorCells.count;
+            survivingFractionT = 1.0;
         }
 
         double activation = Math.tanh((1 - survivingFractionT) * volumeDamagedTumorCells);
@@ -326,6 +386,13 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     }
 
     public static void getImmuneResponse() {
+        if (TumorCells.count <= 0 || Lymphocytes.count <= 0) {
+            OnLattice2DGrid.primaryImmuneResponse = 0;
+            OnLattice2DGrid.secondaryImmuneResponse = 0;
+            OnLattice2DGrid.immuneResponse = 0;
+            return;
+        }
+
         double concentrationAntiPD1_PDL1 = 0;
         OnLattice2DGrid.primaryImmuneResponse = ((Double) FigParameters.rateOfCellKilling * Lymphocytes.count) /
                 (1 + ((FigParameters.immuneSuppressionEffect * Math.pow(TumorCells.count, ((double) 2 / 3)) * Lymphocytes.count) / (1 + concentrationAntiPD1_PDL1)));
@@ -333,7 +400,7 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         double concentrationAntiCTLA4 = 0;
         double sensitivityFactorZs = 0.0314;
         int NormalizationFactor = 5;
-        OnLattice2DGrid.secondaryImmuneResponse += sensitivityFactorZs * ((1 + concentrationAntiCTLA4) /
+        OnLattice2DGrid.secondaryImmuneResponse = sensitivityFactorZs * ((1 + concentrationAntiCTLA4) /
                 (NormalizationFactor + concentrationAntiCTLA4)) * OnLattice2DGrid.primaryImmuneResponse;
 
         OnLattice2DGrid.immuneResponse = OnLattice2DGrid.primaryImmuneResponse + OnLattice2DGrid.secondaryImmuneResponse;
@@ -348,20 +415,77 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         return 1 - survivingFractionL + (survivingFractionL * FigParameters.decayConstantOfL);
     }
 
+    private static double clampProbability(double value) {
+        return Math.max(0, Math.min(1, value));
+    }
 
-    public static double[] getTumorCellsProb(int radiationDose) {
-        double survivingFractionT = getSurvivingFraction(radiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
-        double dieProbRad = 1 - survivingFractionT;
-        double dieProbImm = survivingFractionT * OnLattice2DGrid.immuneResponse ;
-        double divProb = survivingFractionT * (1 - OnLattice2DGrid.immuneResponse) * FigParameters.tumorGrowthRate;
+    // clone-specific tumour probabilities (heterogeneous behaviour)
+    public static double[] getTumorCellsProb(int radiationDose, int cloneId) {
+
+        // safety: clamp cloneId to valid range
+        if (cloneId < 0 || cloneId >= FigParameters.cloneAlphaMultiplier.length) {
+            cloneId = 0;
+        }
+
+        // 1) clone-specific alpha/beta
+        double alphaBase = FigParameters.radiationSensitivityOfTumorCellsAlpha;
+        double betaBase  = FigParameters.radiationSensitivityOfTumorCellsBeta;
+
+        double alpha = alphaBase * FigParameters.cloneAlphaMultiplier[cloneId];
+        double beta  = betaBase  * FigParameters.cloneBetaMultiplier[cloneId];
+
+        // 2) surviving fraction with clone-specific radiosensitivity
+        double survivingFractionT = getSurvivingFraction(radiationDose, alpha, beta);
+
+        // 3) baseline probs
+        double dieProbRad = clampProbability(1 - survivingFractionT);
+        double effectiveImmuneResponse = clampProbability(OnLattice2DGrid.immuneResponse);
+
+        double dieProbImm = survivingFractionT * effectiveImmuneResponse;
+
+        double divProb = survivingFractionT
+                * (1 - effectiveImmuneResponse)
+                * FigParameters.tumorGrowthRate;
+
+        // 4) apply clone-specific growth + immune modifiers
+        double growthMult = FigParameters.cloneGrowthMultiplier[cloneId];
+        double immuneMult = FigParameters.cloneImmuneKillMultiplier[cloneId];
+
+        divProb    *= growthMult;
+        dieProbImm *= immuneMult;
+
+        double remaining = 1 - dieProbRad;
+        dieProbImm = Math.min(Math.max(0, dieProbImm), remaining);
+        remaining -= dieProbImm;
+        divProb = Math.min(Math.max(0, divProb), remaining);
+
         return new double[]{dieProbRad, dieProbImm, divProb};
     }
 
+
+
     public static double[] getTriggeringCellsProb(int radiationDose) {
-        double volumeDamagedTumorCells = (double) DoomedCells.countRad / (DoomedCells.count + TumorCells.count);
-        double survivingFractionTUnradiated = getSurvivingFraction(SimulationParameters.baseRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
-        double survivingFractionTRadiated = getSurvivingFraction(SimulationParameters.appliedRadiationDose, FigParameters.radiationSensitivityOfTumorCellsAlpha, FigParameters.radiationSensitivityOfTumorCellsBeta);
-        TriggeringCells.SurvivingFractionTLast = (TumorCells.countRad * survivingFractionTRadiated + (TumorCells.count - TumorCells.countRad) * survivingFractionTUnradiated) / TumorCells.count;
+        int totalTumorBurden = DoomedCells.count + TumorCells.count;
+        if (totalTumorBurden <= 0 || TumorCells.count <= 0) {
+            TriggeringCells.SurvivingFractionTLast = 1.0;
+            double survivingFractionL = getSurvivingFraction(radiationDose, FigParameters.radiationSensitivityOfLymphocytesAlpha, FigParameters.radiationSensitivityOfLymphocytesBeta);
+            double survivingFractionI = survivingFractionL;
+            double dieProb = (1 - survivingFractionI) * (1 - FigParameters.recoveryConstantOfA);
+            return new double[]{dieProb, 0};
+        }
+
+        double volumeDamagedTumorCells = (double) DoomedCells.countRad / totalTumorBurden;
+        // Clone-weighted surviving fraction: irradiated cells use appliedDose, others use baseDose (SF=1.0)
+        double sfWeightedSum = 0;
+        for (int c = 0; c < TumorCells.NUM_CLONES; c++) {
+            double alpha = FigParameters.radiationSensitivityOfTumorCellsAlpha * FigParameters.cloneAlphaMultiplier[c];
+            double beta  = FigParameters.radiationSensitivityOfTumorCellsBeta  * FigParameters.cloneBetaMultiplier[c];
+            double sfRad = getSurvivingFraction(SimulationParameters.appliedRadiationDose, alpha, beta);
+            // SF at base dose (0) = 1.0 exactly, so unradiated contribution = cloneCount[c] - cloneCountRad[c]
+            sfWeightedSum += TumorCells.cloneCountRad[c] * sfRad
+                           + (TumorCells.cloneCount[c] - TumorCells.cloneCountRad[c]) * 1.0;
+        }
+        TriggeringCells.SurvivingFractionTLast = sfWeightedSum / TumorCells.count;
 
         double activation = Math.tanh((1 - TriggeringCells.SurvivingFractionTLast) * volumeDamagedTumorCells);
         double survivingFractionL = getSurvivingFraction(radiationDose, FigParameters.radiationSensitivityOfLymphocytesAlpha, FigParameters.radiationSensitivityOfLymphocytesBeta);
