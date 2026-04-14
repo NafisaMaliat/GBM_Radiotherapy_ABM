@@ -22,3 +22,9 @@ HALModeling2024Outs/
 # Analysis output files
 analysis/.venv/
 
+# Claude Code working files
+.claude/
+
+# Jupyter checkpoint files
+.ipynb_checkpoints/
+
