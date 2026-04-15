@@ -80,12 +80,14 @@ public class Main {
         OnLattice2DGrid model = new OnLattice2DGrid(x, y);
 
         // cache all pixel coordinates for total-radiation mode
+        allPixels.clear(); // must clear before adding — static list persists across BatchRunner trials
         for (int i = 0; i < model.xDim; i++) {
             for (int j = 0; j < model.yDim; j++) {
                 allPixels.add(new int[]{i, j});
             }
         }
 
+        writeGIF = false; // reset for BatchRunner — static field persists across trials
         RadiationManager radiationManager = new RadiationManager(model, params);
 
         new Lymphocytes().Lymphocytes();
@@ -98,7 +100,7 @@ public class Main {
         CSVWriter writer = new CSVWriter(model);
 
         if (printCounts) writer.saveCountsToCSV(fullPath1, false, 0);
-        if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, false, 0, false);
+        if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, false, 0);
         if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, false, 0);
 
         GifMaker gif = new GifMaker(directory + "/TrialRunGif.gif", 1, false);
@@ -124,7 +126,7 @@ public class Main {
                         radiationManager.radiationApplied();
                     }
                 }
-                if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i, true);
+                if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i);
 
             } else if (radiationTimesteps.contains(i - 1)) {
                 radiationManager.radiationUnapplied();
@@ -143,23 +145,16 @@ public class Main {
 
             if (printCounts) writer.saveCountsToCSV(fullPath1, true, i);
 
-            if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i, false);
+            if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i);
             if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, true, i);
             if (i == timesteps) {
                 writeGIF = true;   // only start saving frames at the very last step block
             }
             model.DrawModelandUpdateProb(win, gif, params); //get occupied spaces to use for stepCells method, rerun if model pop goes to 0
 
-            if (model.Pop() == 0)
-
-             if (TumorCells.count == 0) {
+            if (TumorCells.count == 0) {
                 System.out.println("Timestep tumor population reached 0: " + i + "\n");
                 break;
-                /*model.Init(win, model);
-                if (printCounts) model.saveCountsToCSV(fullPath1, true, 0);
-                if (printProbabilities) model.saveProbabilitiesToCSV(fullPath2, true, 0, win, false);
-                if (printNeighbors) model.saveLymphocyteNeighborstoCSV(fullPath3, true, 0);
-                i = 1;*/
             }
         }
 

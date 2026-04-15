@@ -7,9 +7,6 @@ class TumorCells {
     // How many clones we’re modelling
     public static final int NUM_CLONES = 3;
 
-    // Stylised fractions: 60% baseline, 25% proliferative, 15% resistant
-    public static final double[] INITIAL_CLONE_FRACTIONS = {0.6, 0.25, 0.15};
-
     // Names and colours per clone
     public static String[] cloneNames = {
             "Baseline",          // clone 0
@@ -32,6 +29,11 @@ class TumorCells {
     public static double dieProbRad;
     public static double dieProbImm;
     public static double divProb;
+
+    // Per-clone average probabilities (updated each timestep in DrawModelandUpdateProb)
+    public static double[] cloneDieProbRad = new double[NUM_CLONES];
+    public static double[] cloneDieProbImm = new double[NUM_CLONES];
+    public static double[] cloneDivProb    = new double[NUM_CLONES];
     public static int colorIndex = 1; // keep for now if used elsewhere
 
     public static int count;
@@ -47,18 +49,4 @@ class TumorCells {
         }
     }
 
-    // ----Helper to pick a clone id using 60/25/15 fractions ----
-    // we take a random double in [0,1)
-    public static int sampleInitialCloneId(double r) {
-        double f0 = INITIAL_CLONE_FRACTIONS[0];
-        double f1 = INITIAL_CLONE_FRACTIONS[1];
-
-        if (r < f0) {
-            return 0; // baseline
-        } else if (r < f0 + f1) {
-            return 1; // proliferative
-        } else {
-            return 2; // invasive / resistant
-        }
-    }
 }

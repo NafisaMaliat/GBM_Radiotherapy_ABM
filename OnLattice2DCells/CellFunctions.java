@@ -99,8 +99,8 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
             if (G.rng.Double() < this.dieProb) {
                 Lymphocytes.count--;
-                Dispose();
                 int[] space = {this.Xsq(), this.Ysq()};
+                Dispose();
                 reduceLymphocyteDensity(G, space);
             }
 
@@ -162,11 +162,12 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
         } else if (this.type == Type.TRIGGERING) {
 
-            if (G.rng.Double() < this.dieProb) {
+            double r = G.rng.Double();
+            if (r < this.dieProb) {
                 Dispose();
                 TriggeringCells.count--;
                 OnLattice2DGrid.triggeringDied = true;
-            } else if (G.rng.Double() < (this.dieProb + this.activateProb)) {
+            } else if (r < this.dieProb + this.activateProb) {
                 Dispose();
                 TriggeringCells.count--;
                 OnLattice2DGrid.triggeringDied = true;
@@ -403,7 +404,8 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         OnLattice2DGrid.secondaryImmuneResponse = sensitivityFactorZs * ((1 + concentrationAntiCTLA4) /
                 (NormalizationFactor + concentrationAntiCTLA4)) * OnLattice2DGrid.primaryImmuneResponse;
 
-        OnLattice2DGrid.immuneResponse = OnLattice2DGrid.primaryImmuneResponse + OnLattice2DGrid.secondaryImmuneResponse;
+        OnLattice2DGrid.immuneResponse = Math.min(1.0,
+                OnLattice2DGrid.primaryImmuneResponse + OnLattice2DGrid.secondaryImmuneResponse);
     }
 
     public static double getSurvivingFraction(double radiationDose, double alpha, double beta) {

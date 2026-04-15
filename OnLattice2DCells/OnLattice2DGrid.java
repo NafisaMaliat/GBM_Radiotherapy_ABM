@@ -82,6 +82,11 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             System.exit(0);
         }
 
+        // Clear static spatial lists — these persist across BatchRunner trials and must be reset
+        tumorSpaces.clear();
+        triggeringSpaces.clear();
+        lymphocyteSpaces.clear();
+
         lymphocyteNeighbors = new int[model.xDim][model.yDim];
         postRadiationSignal = 0.0;
         int lymphocitePopulation = 0;
@@ -249,6 +254,11 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         double tumorDivProbSum = 0;
         int tumorCellCount = 0;
 
+        double[] cloneDieProbRadSum = new double[TumorCells.NUM_CLONES];
+        double[] cloneDieProbImmSum = new double[TumorCells.NUM_CLONES];
+        double[] cloneDivProbSum    = new double[TumorCells.NUM_CLONES];
+        int[] cloneCellCount        = new int[TumorCells.NUM_CLONES];
+
         // Decay post-radiation immune signal each timestep
         postRadiationSignal *= (1.0 - FigParameters.immuneSignalDecayRate);
 
@@ -275,6 +285,12 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
                     tumorDieProbImmSum += probs[1];
                     tumorDivProbSum += probs[2];
                     tumorCellCount++;
+
+                    int c = cell.cloneId;
+                    cloneDieProbRadSum[c] += probs[0];
+                    cloneDieProbImmSum[c] += probs[1];
+                    cloneDivProbSum[c]    += probs[2];
+                    cloneCellCount[c]++;
                 } else if (cell.type == CellFunctions.Type.TRIGGERING) {
                     cell.dieProb = TriggeringCells.dieProb;
                     cell.activateProb = TriggeringCells.activateProb;
@@ -292,6 +308,17 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             TumorCells.dieProbRad = 0;
             TumorCells.dieProbImm = 0;
             TumorCells.divProb = 0;
+        }
+        for (int c = 0; c < TumorCells.NUM_CLONES; c++) {
+            if (cloneCellCount[c] > 0) {
+                TumorCells.cloneDieProbRad[c] = cloneDieProbRadSum[c] / cloneCellCount[c];
+                TumorCells.cloneDieProbImm[c] = cloneDieProbImmSum[c] / cloneCellCount[c];
+                TumorCells.cloneDivProb[c]    = cloneDivProbSum[c]    / cloneCellCount[c];
+            } else {
+                TumorCells.cloneDieProbRad[c] = 0;
+                TumorCells.cloneDieProbImm[c] = 0;
+                TumorCells.cloneDivProb[c]    = 0;
+            }
         }
         if (Main.writeGIF) gif.AddFrame(win);
     }
