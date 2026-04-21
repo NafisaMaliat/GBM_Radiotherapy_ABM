@@ -15,7 +15,7 @@ public class Main {
     public static List<Integer> radiationTimesteps = List.of(200);
     public static boolean totalRadiation = false, centerRadiation = false, spatialRadiation = false;
     public static double targetPercentage = 0.7;
-    public static double thresholdPercentage = 0.8;
+    public static double thresholdPercentage = 0.01; // lowered from 0.8: real SFRT beams irradiate any tissue they overlap, not just dense tumour regions
     public static int radius = 10;
     public static boolean scenarioActive = true;
     public static boolean immuneSuppressionEffectThreshold = false;
