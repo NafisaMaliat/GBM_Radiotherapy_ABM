@@ -6,6 +6,8 @@ import java.time.Instant;
 public class BatchRunner {
 
     public static void main(String[] args) {
+        Main.batchMode = true;
+
         String[] scenarios = {
                 "Control", "BB5", "BB10", "BB15",
                 "MRT200", "MRT400", "MRT600",

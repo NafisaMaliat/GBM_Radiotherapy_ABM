@@ -19,6 +19,7 @@ public class Main {
     public static int radius = 10;
     public static boolean scenarioActive = true;
     public static boolean immuneSuppressionEffectThreshold = false;
+    public static boolean batchMode = false; // set by BatchRunner to skip GUI
 
     public static List<int[]> availableSpaces = new ArrayList<>();
     public static List<int[]> radiatedPixels = new ArrayList<>();
@@ -37,7 +38,7 @@ public class Main {
 
 
     //Input scenario to run
-    public static String scenario = "MRT400";
+    public static String scenario = "BB5";
 
 
     public static void main(String[] args) {
@@ -76,7 +77,10 @@ public class Main {
         int y = 100;
         int timesteps = 540;// 540 days is the survival with treatment [https://www.thebraintumourcharity.org/brain-tumour-diagnosis-treatment/types-of-brain-tumour-adult/glioblastoma/glioblastoma-prognosis/]
 
-        GridWindow win = new GridWindow(x, y, 5);
+        // In batch mode: smaller window and killOnClose=false so BatchRunner can continue
+        GridWindow win = batchMode
+                ? new GridWindow(x, y, 1, false, null)
+                : new GridWindow(x, y, 5);
         OnLattice2DGrid model = new OnLattice2DGrid(x, y);
 
         // cache all pixel coordinates for total-radiation mode
@@ -106,7 +110,7 @@ public class Main {
         GifMaker gif = new GifMaker(directory + "/TrialRunGif.gif", 1, false);
 
         for (int i = 1; i <= timesteps; i++) {
-            win.TickPause(1);
+            if (!batchMode) win.TickPause(1);
 
             // Radiation application
             if (radiationTimesteps.contains(i) && TumorCells.count > 20) {
@@ -171,7 +175,6 @@ public class Main {
 
         System.out.println(java.time.LocalDateTime.now() + " - Simulation execution completed successfully.");
 
-        win.Close(); // Close GUI window
-        //System.exit(0); // Terminate Java process
+        win.Close();
     }
 }
