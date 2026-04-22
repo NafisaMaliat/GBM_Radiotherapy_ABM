@@ -143,11 +143,11 @@ public class Main {
             model.updateSpaces(win,params);
 
             // Lymphocyte Migration
-            // Allow recruitment when APCs are alive OR when radiation-created
-            // immunogenic signals (DAMPs, cytokines) are still active.
-            if (TriggeringCells.count > 0 || OnLattice2DGrid.postRadiationSignal > 0.01) {
-                new CellFunctions().lymphocyteMigration(model, win, params);
-            }
+            // Always run: baseline infiltration (infiltrationRate × TumorCells) provides
+            // continuous immune surveillance independent of APCs or radiation signals.
+            // The radiation-amplified term naturally drops to 0 when APCs are gone and
+            // postRadiationSignal has decayed.
+            new CellFunctions().lymphocyteMigration(model, win, params);
 
 
             if (printCounts) writer.saveCountsToCSV(fullPath1, true, i);
