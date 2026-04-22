@@ -97,7 +97,7 @@ class FigParameters {
             tumorInfiltrationRate = 0.1; // shared baseline for all scenarios; radiation-induced boost is via radiationInducedInfiltration
             rateOfCellKilling = 0.135;
             decayConstantOfD = 0.045;
-            decayConstantOfL = 0.045;
+            decayConstantOfL = 0.12; // TIL half-life ~6 days; GBM microenvironment is hostile to lymphocytes
             recoveryConstantOfA = 0.045;
             radiationInducedInfiltration = 2; // 0.5-2 (Mild RT , BB5-BB15), 2-10 (Moderate RT, MRT200–400), 10-100 (Strong RT damage, MRT600 / MB350)
             immuneSuppressionEffect = 0.51; // 1.1 immune escape, suppressed scenario
