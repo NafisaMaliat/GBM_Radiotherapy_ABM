@@ -92,6 +92,7 @@ public class Main {
         }
 
         writeGIF = false; // reset for BatchRunner — static field persists across trials
+        radiatedPixels.clear(); // must clear — if previous trial broke mid-radiation, list carries stale data
         RadiationManager radiationManager = new RadiationManager(model, params);
 
         new Lymphocytes().Lymphocytes();
@@ -142,7 +143,9 @@ public class Main {
             model.updateSpaces(win,params);
 
             // Lymphocyte Migration
-            if (TriggeringCells.count > 0) {
+            // Allow recruitment when APCs are alive OR when radiation-created
+            // immunogenic signals (DAMPs, cytokines) are still active.
+            if (TriggeringCells.count > 0 || OnLattice2DGrid.postRadiationSignal > 0.01) {
                 new CellFunctions().lymphocyteMigration(model, win, params);
             }
 

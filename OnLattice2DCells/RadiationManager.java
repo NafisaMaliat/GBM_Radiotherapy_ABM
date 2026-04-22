@@ -180,6 +180,14 @@ public class RadiationManager {
                     cell.dieProbImm = Tvalues[1];
                     cell.divProb    = Tvalues[2];
 
+                    // Set persistent sublethal damage on irradiated tumour cells.
+                    // Cells that survive radiation carry DNA damage that slows proliferation.
+                    // Damage level scales with dose and clone-specific radiosensitivity (alpha).
+                    double alpha = FigParameters.radiationSensitivityOfTumorCellsAlpha
+                                 * FigParameters.cloneAlphaMultiplier[cloneId];
+                    double sf = Math.exp(-alpha * SimulationParameters.currentRadiationDose);
+                    cell.radiationDamage = Math.min(0.9, (1.0 - sf) * 0.5);
+
                     if (!cell.radiated) {
                         TumorCells.countRad++;
                         TumorCells.cloneCountRad[cloneId]++;
