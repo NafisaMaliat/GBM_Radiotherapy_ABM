@@ -11,6 +11,12 @@ public class SimulationParameters {
     public boolean totalRadiation, centerRadiation, spatialRadiation;
     public boolean immuneSuppressionEffectThreshold;
     public List<int[]> availableSpaces;
+    // Valley-to-Peak Dose Ratio for spatial radiation (MRT/MB)
+    // Physical VPDR is ~5% (MRT) / ~10% (MB), but LQ model applies all damage
+    // in a single timestep rather than over multiple cell divisions.  Effective
+    // values are scaled down to compensate: MRT ~0.015, MB ~0.03.
+    // BB/Control: 0.0 (not applicable — total radiation has no valley)
+    public static double valleyDoseRatio = 0.0;
 
 
 
