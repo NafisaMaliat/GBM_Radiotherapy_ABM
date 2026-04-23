@@ -94,13 +94,13 @@ class FigParameters {
             radiationSensitivityOfLymphocytesAlpha = 0.25;  // lymphocytes > tumour radiosensitivity (was 0.182)
             radiationSensitivityOfLymphocytesBeta = 0.025;  // alpha/beta ≈ 10 Gy — apoptotic death, not mitotic (was 0.143 → alpha/beta 1.3 Gy, wrong)
             tumorGrowthRate = 0.217;
-            tumorInfiltrationRate = 0.1; // shared baseline for all scenarios; radiation-induced boost is via radiationInducedInfiltration
+            tumorInfiltrationRate = 0.1;
             rateOfCellKilling = 0.135;
             decayConstantOfD = 0.045;
-            decayConstantOfL = 0.12; // TIL half-life ~6 days; GBM microenvironment is hostile to lymphocytes
+            decayConstantOfL = 0.12;       // TIL half-life ~6 days
             recoveryConstantOfA = 0.045;
-            radiationInducedInfiltration = 2; // 0.5-2 (Mild RT , BB5-BB15), 2-10 (Moderate RT, MRT200–400), 10-100 (Strong RT damage, MRT600 / MB350)
-            immuneSuppressionEffect = 0.51; // 1.1 immune escape, suppressed scenario
+            radiationInducedInfiltration = 2;
+            immuneSuppressionEffect = 1.1;
         }
 //         else if (figure == 4) { //Highly Invasive/Highly Suppressed Scenario
 //            radiationSensitivityOfTumorCellsAlpha = 0.05;

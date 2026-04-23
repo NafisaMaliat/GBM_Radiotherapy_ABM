@@ -38,7 +38,7 @@ public class Main {
 
 
     //Input scenario to run
-    public static String scenario = "BB5";
+    public static String scenario = "Control";
 
 
     public static void main(String[] args) {
