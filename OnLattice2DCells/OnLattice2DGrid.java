@@ -218,14 +218,15 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         for (int i = 0; i < length; i++) {
             CellFunctions cell = GetAgent(i);
             if (cell == null) {
-                cell = NewAgentSQ(i);
-                params.availableSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
-                cell.Dispose();
+                // Use ItoX/ItoY to convert the linear index to x,y coordinates
+                // instead of creating and disposing a temporary agent each time.
+                // This avoids ~9,500 unnecessary object allocations per timestep.
+                params.availableSpaces.add(new int[]{ItoX(i), ItoY(i)});
             } else if (cell.type == CellFunctions.Type.TUMOR) {
                 tumorSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
             } else if (cell.type == CellFunctions.Type.TRIGGERING) {
                 triggeringSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
-            } else if (cell != null && cell.type == CellFunctions.Type.LYMPHOCYTE) {
+            } else if (cell.type == CellFunctions.Type.LYMPHOCYTE) {
                 lymphocyteSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
             }
             /* Didn't put condition for doomed cell spaces because not necessary for this algorithm. If add it later,

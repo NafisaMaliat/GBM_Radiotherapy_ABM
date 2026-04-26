@@ -342,9 +342,9 @@ class ScenarioParameters {
                     "\nTimesteps Applied: " + Main.radiationTimesteps);
         }
         if (params.centerRadiation) {
-            System.out.println("Center radiation target percentage is " + Main.targetPercentage);
+            System.out.println("Center radiation target percentage is " + params.targetPercentage);
         } else if (params.spatialRadiation) {
-            System.out.println("Spatial radiation threshold percentage is " + Main.thresholdPercentage + " and preset radius is " + params.radius);
+            System.out.println("Spatial radiation threshold percentage is " + params.thresholdPercentage + " and preset radius is " + params.radius);
         }
         if (!params.immuneSuppressionEffectThreshold) {
             System.out.println("Immune Suppression Effect: " + FigParameters.immuneSuppressionEffect);

@@ -25,6 +25,63 @@ public class Main {
     public static List<int[]> radiatedPixels = new ArrayList<>();
     public static List<int[]> allPixels = new ArrayList<>();
 
+    // Resets every static field to its default value.
+    // This is needed because BatchRunner calls Main.main() in a loop — without
+    // resetting, values from a previous scenario/trial leak into the next one.
+    // Currently all scenarios happen to overwrite what they need, so existing
+    // results are unaffected, but any future scenario that skips a field would
+    // silently inherit the previous trial's value.
+    public static void resetStaticState() {
+        figure = 2;
+        baseRadiationDose = 0;
+        currentRadiationDose = 0;
+        appliedRadiationDose = 10;
+        radiationTimesteps = List.of(200);
+        totalRadiation = false;
+        centerRadiation = false;
+        spatialRadiation = false;
+        targetPercentage = 0.7;
+        thresholdPercentage = 0.01;
+        radius = 10;
+        scenarioActive = true;
+        immuneSuppressionEffectThreshold = false;
+        writeGIF = false;
+
+        availableSpaces.clear();
+        radiatedPixels.clear();
+        allPixels.clear();
+
+        // SimulationParameters static fields
+        SimulationParameters.baseRadiationDose = 0;
+        SimulationParameters.currentRadiationDose = 0;
+        SimulationParameters.appliedRadiationDose = 10;
+        SimulationParameters.valleyDoseRatio = 0.0;
+
+        // Cell population counters
+        Lymphocytes.count = 0;
+        Lymphocytes.dieProb = 0;
+        TumorCells.resetCounts();
+        DoomedCells.count = 0;
+        DoomedCells.countRad = 0;
+        DoomedCells.countImm = 0;
+        DoomedCells.dieProb = 0;
+        TriggeringCells.count = 0;
+        TriggeringCells.dieProb = 0;
+        TriggeringCells.activateProb = 0;
+        TriggeringCells.SurvivingFractionTLast = 0;
+
+        // Grid-level static fields
+        OnLattice2DGrid.immuneResponse = 0;
+        OnLattice2DGrid.primaryImmuneResponse = 0;
+        OnLattice2DGrid.secondaryImmuneResponse = 0;
+        OnLattice2DGrid.newLymphocytesAttempted = 0;
+        OnLattice2DGrid.triggeringDied = false;
+        OnLattice2DGrid.postRadiationSignal = 0.0;
+        OnLattice2DGrid.tumorSpaces.clear();
+        OnLattice2DGrid.triggeringSpaces.clear();
+        OnLattice2DGrid.lymphocyteSpaces.clear();
+    }
+
     //Setting file/folder names
     public static final String directory = "HALModeling2024Outs";
     public static final String fileName1 = "TrialRunCounts.csv";
@@ -38,10 +95,14 @@ public class Main {
 
 
     //Input scenario to run
-    public static String scenario = "Control";
+    public static String scenario = "MRT600";
 
 
     public static void main(String[] args) {
+
+        // Reset all static state so that BatchRunner trials start clean.
+        // Without this, values from a previous scenario could leak into the next.
+        resetStaticState();
 
         // Allow scenario override via args
         if (args != null && args.length > 0) {
