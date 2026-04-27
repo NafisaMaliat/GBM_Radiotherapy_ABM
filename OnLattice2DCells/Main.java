@@ -3,7 +3,7 @@ package OnLattice2DCells;
 import HAL.Gui.GifMaker;
 import HAL.Gui.GridWindow;
 
-
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +20,9 @@ public class Main {
     public static boolean scenarioActive = true;
     public static boolean immuneSuppressionEffectThreshold = false;
     public static boolean batchMode = false; // set by BatchRunner to skip GUI
+    public static boolean saveVideo = true; // save full simulation as MP4 video
+    public static int videoFrameInterval = 5; // capture a frame every N timesteps
+    public static int videoFPS = 20; // frames per second in the output MP4
 
     public static List<int[]> availableSpaces = new ArrayList<>();
     public static List<int[]> radiatedPixels = new ArrayList<>();
@@ -95,7 +98,7 @@ public class Main {
 
 
     //Input scenario to run
-    public static String scenario = "MRT600";
+    public static String scenario = "BB15";
 
 
     public static void main(String[] args) {
@@ -132,7 +135,7 @@ public class Main {
         }
 
         System.out.println("\nSave Counts to CSV: " + printCounts + "   Save Probabilities to CSV: " + printProbabilities +
-                "   Save GIF (slows code down): " + writeGIF + "\n");
+                "   Save Video: " + saveVideo + " (every " + videoFrameInterval + " steps)\n");
 
         int x = 100;
         int y = 100;
@@ -152,7 +155,6 @@ public class Main {
             }
         }
 
-        writeGIF = false; // reset for BatchRunner — static field persists across trials
         radiatedPixels.clear(); // must clear — if previous trial broke mid-radiation, list carries stale data
         RadiationManager radiationManager = new RadiationManager(model, params);
 
@@ -169,7 +171,30 @@ public class Main {
         if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, false, 0);
         if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, false, 0);
 
-        GifMaker gif = new GifMaker(directory + "/TrialRunGif.gif", 1, false);
+        // Set up video frame directory if saving video
+        String framesDir = null;
+        String videoPath = null;
+        int frameCount = 0;
+        if (saveVideo) {
+            String scenarioDir = scenarioActive
+                    ? new File(directory, "Scenario" + scenario).getPath()
+                    : directory;
+            framesDir = new File(scenarioDir, "frames").getPath();
+            videoPath = new File(scenarioDir, (scenarioActive ? scenario : "TrialRun") + "_simulation.mp4").getPath();
+            // Clean up any leftover frames from a previous run
+            File framesDirFile = new File(framesDir);
+            if (framesDirFile.exists()) {
+                File[] oldFrames = framesDirFile.listFiles();
+                if (oldFrames != null) {
+                    for (File f : oldFrames) f.delete();
+                }
+            } else {
+                framesDirFile.mkdirs();
+            }
+        }
+
+        // GifMaker still required by DrawModelandUpdateProb — create a dummy that writes no frames
+        GifMaker gif = new GifMaker(directory + "/tmp.gif", 1, false);
 
         for (int i = 1; i <= timesteps; i++) {
             if (!batchMode) win.TickPause(1);
@@ -215,18 +240,60 @@ public class Main {
 
             if (printProbabilities) writer.saveProbabilitiesToCSV(fullPath2, true, i);
             if (printNeighbors) writer.saveLymphocyteNeighborstoCSV(fullPath3, true, i);
-            if (i == timesteps) {
-                writeGIF = true;   // only start saving frames at the very last step block
-            }
             model.DrawModelandUpdateProb(win, gif, params); //get occupied spaces to use for stepCells method, rerun if model pop goes to 0
 
+            // Save PNG frame for video at regular intervals and at the final timestep
+            if (saveVideo && (i % videoFrameInterval == 0 || i == timesteps)) {
+                win.ToPNG(framesDir + "/frame_" + String.format("%05d", frameCount) + ".png");
+                frameCount++;
+            }
+
             if (TumorCells.count == 0) {
+                // Capture final frame before breaking (skip if already saved this timestep)
+                if (saveVideo && i % videoFrameInterval != 0 && i != timesteps) {
+                    win.ToPNG(framesDir + "/frame_" + String.format("%05d", frameCount) + ".png");
+                    frameCount++;
+                }
                 System.out.println("Timestep tumor population reached 0: " + i + "\n");
                 break;
             }
         }
 
         gif.Close();
+        // Delete the dummy GIF file
+        new File(directory + "/tmp.gif").delete();
+
+        // Convert PNG frames to MP4 video using ffmpeg
+        if (saveVideo && frameCount > 0) {
+            System.out.println("Converting " + frameCount + " frames to MP4...");
+            try {
+                ProcessBuilder pb = new ProcessBuilder(
+                        "ffmpeg", "-y",
+                        "-framerate", String.valueOf(videoFPS),
+                        "-i", framesDir + "/frame_%05d.png",
+                        "-vcodec", "libx264",
+                        "-pix_fmt", "yuv420p",
+                        videoPath
+                );
+                pb.inheritIO();
+                Process proc = pb.start();
+                int exitCode = proc.waitFor();
+                if (exitCode == 0) {
+                    System.out.println("Simulation video saved to: " + videoPath);
+                    // Clean up frame PNGs
+                    File framesDirFile = new File(framesDir);
+                    File[] frames = framesDirFile.listFiles();
+                    if (frames != null) {
+                        for (File f : frames) f.delete();
+                    }
+                    framesDirFile.delete();
+                } else {
+                    System.err.println("ffmpeg exited with code " + exitCode + " — PNG frames kept in: " + framesDir);
+                }
+            } catch (Exception e) {
+                System.err.println("Could not run ffmpeg (is it installed?). PNG frames kept in: " + framesDir);
+            }
+        }
 
         writer.printPopulation(Lymphocytes.name, Lymphocytes.colorIndex, Lymphocytes.count);
         writer.printPopulation(TumorCells.name, TumorCells.colorIndex, TumorCells.count);
