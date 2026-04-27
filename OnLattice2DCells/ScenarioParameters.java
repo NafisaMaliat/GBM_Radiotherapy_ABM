@@ -13,6 +13,7 @@ class ScenarioParameters {
         if (!overwriteParams) return;
 
         this.scenario = scenario;
+        SimulationParameters.valleyDoseRatio = 0.0; // reset for each scenario (default: no valley dose)
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         String dateTime = LocalDateTime.now().format(formatter);
 
@@ -155,6 +156,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 50.0; // Strong radiation damage → higher infiltration
 
             params.radius = 5; // <- Smaller beams for MRT
+            SimulationParameters.valleyDoseRatio = 0.015; // MRT: effective VPDR scaled for single-step LQ model
         }
         else if (scenario.equalsIgnoreCase("MRT400"))
         {
@@ -174,6 +176,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 75.0;
 
             params.radius = 5; // <- Smaller beams for MRT
+            SimulationParameters.valleyDoseRatio = 0.015;
         }
         else if (scenario.equalsIgnoreCase("MRT600"))
         {
@@ -192,6 +195,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 100.0;
 
             params.radius = 5; // <- Smaller beams for MRT
+            SimulationParameters.valleyDoseRatio = 0.015;
         }
         else if (scenario.equalsIgnoreCase("MB180"))
         {
@@ -210,6 +214,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 30.0;
 
             params.radius = 10; // <- Thicker beams
+            SimulationParameters.valleyDoseRatio = 0.03; // MB: wider beams, ~10% VPDR
         }
         else if (scenario.equalsIgnoreCase("MB350"))
         {
@@ -228,6 +233,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 60.0;
 
             params.radius = 10; // <- Thicker beams
+            SimulationParameters.valleyDoseRatio = 0.03;
         }
         else if (scenario.equalsIgnoreCase("Pred_MRT180"))
         {
@@ -246,6 +252,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 50.0;
 
             params.radius = 5;
+            SimulationParameters.valleyDoseRatio = 0.015;
         }
         else if (scenario.equalsIgnoreCase("Pred_MRT350"))
         {
@@ -264,6 +271,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 75.0;
 
             params.radius = 5;
+            SimulationParameters.valleyDoseRatio = 0.015;
         }
         else if (scenario.equalsIgnoreCase("Pred_MB200"))
         {
@@ -282,6 +290,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 30.0;
 
             params.radius = 10; // <- Thicker beams
+            SimulationParameters.valleyDoseRatio = 0.03;
         }
         else if (scenario.equalsIgnoreCase("Pred_MB400"))
         {
@@ -300,6 +309,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 60.0;
 
             params.radius = 10; // <- Thicker beams
+            SimulationParameters.valleyDoseRatio = 0.03;
         }
         else if (scenario.equalsIgnoreCase("Pred_MB600"))
         {
@@ -318,6 +328,7 @@ class ScenarioParameters {
             FigParameters.radiationInducedInfiltration = 100.0;
 
             params.radius = 10; // <- Thicker beams
+            SimulationParameters.valleyDoseRatio = 0.03;
         }
         else {
             System.err.printf("Invalid scenario: %s.%nPlease provide a valid scenario or set 'scenarioActive' to false.%n", scenario);
@@ -331,9 +342,9 @@ class ScenarioParameters {
                     "\nTimesteps Applied: " + Main.radiationTimesteps);
         }
         if (params.centerRadiation) {
-            System.out.println("Center radiation target percentage is " + Main.targetPercentage);
+            System.out.println("Center radiation target percentage is " + params.targetPercentage);
         } else if (params.spatialRadiation) {
-            System.out.println("Spatial radiation threshold percentage is " + Main.thresholdPercentage + " and preset radius is " + params.radius);
+            System.out.println("Spatial radiation threshold percentage is " + params.thresholdPercentage + " and preset radius is " + params.radius);
         }
         if (!params.immuneSuppressionEffectThreshold) {
             System.out.println("Immune Suppression Effect: " + FigParameters.immuneSuppressionEffect);

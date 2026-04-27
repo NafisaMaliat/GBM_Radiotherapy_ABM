@@ -82,6 +82,11 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             System.exit(0);
         }
 
+        // Clear static spatial lists — these persist across BatchRunner trials and must be reset
+        tumorSpaces.clear();
+        triggeringSpaces.clear();
+        lymphocyteSpaces.clear();
+
         lymphocyteNeighbors = new int[model.xDim][model.yDim];
         postRadiationSignal = 0.0;
         int lymphocitePopulation = 0;
@@ -213,14 +218,15 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         for (int i = 0; i < length; i++) {
             CellFunctions cell = GetAgent(i);
             if (cell == null) {
-                cell = NewAgentSQ(i);
-                params.availableSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
-                cell.Dispose();
+                // Use ItoX/ItoY to convert the linear index to x,y coordinates
+                // instead of creating and disposing a temporary agent each time.
+                // This avoids ~9,500 unnecessary object allocations per timestep.
+                params.availableSpaces.add(new int[]{ItoX(i), ItoY(i)});
             } else if (cell.type == CellFunctions.Type.TUMOR) {
                 tumorSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
             } else if (cell.type == CellFunctions.Type.TRIGGERING) {
                 triggeringSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
-            } else if (cell != null && cell.type == CellFunctions.Type.LYMPHOCYTE) {
+            } else if (cell.type == CellFunctions.Type.LYMPHOCYTE) {
                 lymphocyteSpaces.add(new int[]{cell.Xsq(), cell.Ysq()});
             }
             /* Didn't put condition for doomed cell spaces because not necessary for this algorithm. If add it later,
@@ -249,6 +255,11 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
         double tumorDivProbSum = 0;
         int tumorCellCount = 0;
 
+        double[] cloneDieProbRadSum = new double[TumorCells.NUM_CLONES];
+        double[] cloneDieProbImmSum = new double[TumorCells.NUM_CLONES];
+        double[] cloneDivProbSum    = new double[TumorCells.NUM_CLONES];
+        int[] cloneCellCount        = new int[TumorCells.NUM_CLONES];
+
         // Decay post-radiation immune signal each timestep
         postRadiationSignal *= (1.0 - FigParameters.immuneSignalDecayRate);
 
@@ -275,6 +286,12 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
                     tumorDieProbImmSum += probs[1];
                     tumorDivProbSum += probs[2];
                     tumorCellCount++;
+
+                    int c = cell.cloneId;
+                    cloneDieProbRadSum[c] += probs[0];
+                    cloneDieProbImmSum[c] += probs[1];
+                    cloneDivProbSum[c]    += probs[2];
+                    cloneCellCount[c]++;
                 } else if (cell.type == CellFunctions.Type.TRIGGERING) {
                     cell.dieProb = TriggeringCells.dieProb;
                     cell.activateProb = TriggeringCells.activateProb;
@@ -292,6 +309,17 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             TumorCells.dieProbRad = 0;
             TumorCells.dieProbImm = 0;
             TumorCells.divProb = 0;
+        }
+        for (int c = 0; c < TumorCells.NUM_CLONES; c++) {
+            if (cloneCellCount[c] > 0) {
+                TumorCells.cloneDieProbRad[c] = cloneDieProbRadSum[c] / cloneCellCount[c];
+                TumorCells.cloneDieProbImm[c] = cloneDieProbImmSum[c] / cloneCellCount[c];
+                TumorCells.cloneDivProb[c]    = cloneDivProbSum[c]    / cloneCellCount[c];
+            } else {
+                TumorCells.cloneDieProbRad[c] = 0;
+                TumorCells.cloneDieProbImm[c] = 0;
+                TumorCells.cloneDivProb[c]    = 0;
+            }
         }
         if (Main.writeGIF) gif.AddFrame(win);
     }

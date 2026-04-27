@@ -5,7 +5,13 @@ import java.time.Instant;
 
 public class BatchRunner {
 
+    // Set to true to save one video per scenario (first trial only) during batch runs.
+    // Videos slow down execution, so only the first trial is recorded by default.
+    public static boolean saveVideos = false;
+
     public static void main(String[] args) {
+        Main.batchMode = true;
+
         String[] scenarios = {
                 "Control", "BB5", "BB10", "BB15",
                 "MRT200", "MRT400", "MRT600",
@@ -21,6 +27,9 @@ public class BatchRunner {
                 System.out.printf("Running Scenario: %-12s | Trial: %d%n", scenario, trial);
 
                 Instant trialStart = Instant.now();
+
+                // Save video for the first trial of each scenario only (if enabled)
+                Main.saveVideo = saveVideos && (trial == 1);
 
                 // Run simulation with scenario as argument
                 System.out.printf("▶️ Starting Scenario: %s | Trial: %d%n", scenario, trial);

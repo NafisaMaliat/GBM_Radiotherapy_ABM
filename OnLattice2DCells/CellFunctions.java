@@ -22,6 +22,12 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     // 0 = Baseline, 1 = Proliferative, 2 = Invasive/Resistant
     int cloneId = 0;
 
+    // Persistent sublethal radiation damage (0 = undamaged, up to ~0.9 = heavily damaged)
+    // Reduces division probability while repairing; decays each timestep.
+    // Models G2/M checkpoint arrest and DNA double-strand break repair delay.
+    double radiationDamage = 0.0;
+    static final double DAMAGE_REPAIR_RATE = 0.03; // decay per timestep; half-life ~23 days
+
 
 
     public enum Type {
@@ -99,8 +105,8 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
             if (G.rng.Double() < this.dieProb) {
                 Lymphocytes.count--;
-                Dispose();
                 int[] space = {this.Xsq(), this.Ysq()};
+                Dispose();
                 reduceLymphocyteDensity(G, space);
             }
 
@@ -115,6 +121,13 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
             this.dieProbRad = probs[0];
             this.dieProbImm = probs[1];
             this.divProb    = probs[2];
+
+            // Persistent sublethal damage slows division (G2/M arrest for DNA repair)
+            if (this.radiationDamage > 0) {
+                this.divProb *= (1.0 - this.radiationDamage);
+                this.radiationDamage *= (1.0 - DAMAGE_REPAIR_RATE);
+                if (this.radiationDamage < 0.001) this.radiationDamage = 0;
+            }
 
             // one random draw to decide outcome
             double r = G.rng.Double();
@@ -162,11 +175,12 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
         } else if (this.type == Type.TRIGGERING) {
 
-            if (G.rng.Double() < this.dieProb) {
+            double r = G.rng.Double();
+            if (r < this.dieProb) {
                 Dispose();
                 TriggeringCells.count--;
                 OnLattice2DGrid.triggeringDied = true;
-            } else if (G.rng.Double() < (this.dieProb + this.activateProb)) {
+            } else if (r < this.dieProb + this.activateProb) {
                 Dispose();
                 TriggeringCells.count--;
                 OnLattice2DGrid.triggeringDied = true;
@@ -186,6 +200,9 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
             // Inherit clone from parent BEFORE Init
             daughter.cloneId = this.cloneId;
+
+            // Daughter inherits diluted radiation damage (damage shared across division)
+            daughter.radiationDamage = this.radiationDamage * 0.5;
 
             // Initialise as tumour – Init will set colour etc. using cloneId
             daughter.Init(Type.TUMOR, params);
@@ -250,7 +267,19 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
     }
 
     public void lymphocyteMigration(OnLattice2DGrid G, GridWindow win, SimulationParameters params) {
-        double volumeDamagedTumorCells = (double) DoomedCells.countRad / (DoomedCells.count + TumorCells.count);
+        // Fraction of tumour microenvironment showing radiation damage.
+        // Use actual doomed-cell fraction when available; supplement with
+        // postRadiationSignal to model persistent immunogenic debris (DAMPs,
+        // released antigens) after doomed cells have cleared.
+        double volumeDamagedTumorCells;
+        int totalBurden = DoomedCells.count + TumorCells.count;
+        if (totalBurden > 0) {
+            double actualFraction = (double) DoomedCells.countRad / totalBurden;
+            double signalFraction = OnLattice2DGrid.postRadiationSignal * 0.3;
+            volumeDamagedTumorCells = Math.max(actualFraction, signalFraction);
+        } else {
+            volumeDamagedTumorCells = 0;
+        }
         // Clone-weighted surviving fraction: irradiated cells use currentDose, others use baseDose (SF=1.0)
         // Use active dose when radiation is on; otherwise use the decaying post-radiation signal.
         // This sustains immune activation for ~50-100 timesteps after radiation, reflecting
@@ -266,8 +295,21 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
                 double alpha = FigParameters.radiationSensitivityOfTumorCellsAlpha * FigParameters.cloneAlphaMultiplier[c];
                 double beta  = FigParameters.radiationSensitivityOfTumorCellsBeta  * FigParameters.cloneBetaMultiplier[c];
                 double sfRad = getSurvivingFraction(doseForActivation, alpha, beta);
-                sfWeightedSum += TumorCells.cloneCountRad[c] * sfRad
-                               + (TumorCells.cloneCount[c] - TumorCells.cloneCountRad[c]) * 1.0;
+                // Use actual radiated count when radiation is on; otherwise, use
+                // postRadiationSignal to estimate the "immunogenically affected"
+                // fraction.  High-dose cells die immediately so cloneCountRad drops
+                // to 0, but danger signals (DAMPs, cytokines, released antigens)
+                // persist — postRadiationSignal decays slowly to model this.
+                double affectedCount;
+                if (TumorCells.cloneCountRad[c] > 0) {
+                    affectedCount = TumorCells.cloneCountRad[c];
+                } else if (OnLattice2DGrid.postRadiationSignal > 0.01) {
+                    affectedCount = TumorCells.cloneCount[c] * OnLattice2DGrid.postRadiationSignal;
+                } else {
+                    affectedCount = 0;
+                }
+                sfWeightedSum += affectedCount * sfRad
+                               + (TumorCells.cloneCount[c] - affectedCount) * 1.0;
             }
             survivingFractionT = sfWeightedSum / TumorCells.count;
         } else {
@@ -403,7 +445,8 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
         OnLattice2DGrid.secondaryImmuneResponse = sensitivityFactorZs * ((1 + concentrationAntiCTLA4) /
                 (NormalizationFactor + concentrationAntiCTLA4)) * OnLattice2DGrid.primaryImmuneResponse;
 
-        OnLattice2DGrid.immuneResponse = OnLattice2DGrid.primaryImmuneResponse + OnLattice2DGrid.secondaryImmuneResponse;
+        OnLattice2DGrid.immuneResponse = Math.min(1.0,
+                OnLattice2DGrid.primaryImmuneResponse + OnLattice2DGrid.secondaryImmuneResponse);
     }
 
     public static double getSurvivingFraction(double radiationDose, double alpha, double beta) {
@@ -476,12 +519,15 @@ class CellFunctions extends AgentSQ2Dunstackable<OnLattice2DGrid> {
 
         double volumeDamagedTumorCells = (double) DoomedCells.countRad / totalTumorBurden;
         // Clone-weighted surviving fraction: irradiated cells use appliedDose, others use baseDose (SF=1.0)
+        // NOTE: this method intentionally does NOT use postRadiationSignal.
+        // Triggering cells (APCs) should not activate faster post-radiation — that
+        // would deplete them and collapse lymphocyte recruitment.  The immune boost
+        // from radiation is handled in lymphocyteMigration's recruitment formula.
         double sfWeightedSum = 0;
         for (int c = 0; c < TumorCells.NUM_CLONES; c++) {
             double alpha = FigParameters.radiationSensitivityOfTumorCellsAlpha * FigParameters.cloneAlphaMultiplier[c];
             double beta  = FigParameters.radiationSensitivityOfTumorCellsBeta  * FigParameters.cloneBetaMultiplier[c];
             double sfRad = getSurvivingFraction(SimulationParameters.appliedRadiationDose, alpha, beta);
-            // SF at base dose (0) = 1.0 exactly, so unradiated contribution = cloneCount[c] - cloneCountRad[c]
             sfWeightedSum += TumorCells.cloneCountRad[c] * sfRad
                            + (TumorCells.cloneCount[c] - TumorCells.cloneCountRad[c]) * 1.0;
         }

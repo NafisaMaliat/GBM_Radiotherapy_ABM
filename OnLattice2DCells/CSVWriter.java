@@ -16,15 +16,18 @@ public class CSVWriter {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(fullPath1, append))) {
             if (timestep == 0) {
                 writer.write("Timestep,Lymphocytes,TriggeringCells,TumorCells,TumorCellsRad,DoomedCells," +
-                        "DoomedCellsRad,Lymphocytes DieProb,Tumor DieProbRad,Tumor DieProbImm,Tumor DivProb," +
+                        "DoomedCellsRad,DoomedCellsImm,Lymphocytes DieProb,Tumor DieProbRad,Tumor DieProbImm,Tumor DivProb," +
                         "SurvivingFractionTLast,PrimaryImmuneResponse,SecondaryImmuneResponse,ImmuneResponse," +
                         "LymphocyteMigrationAttempted,ImmuneSuppression," +
                         "TumorClone0,TumorClone1,TumorClone2," +
-                        "TumorClone0Rad,TumorClone1Rad,TumorClone2Rad");
+                        "TumorClone0Rad,TumorClone1Rad,TumorClone2Rad," +
+                        "Clone0DieProbRad,Clone0DieProbImm,Clone0DivProb," +
+                        "Clone1DieProbRad,Clone1DieProbImm,Clone1DivProb," +
+                        "Clone2DieProbRad,Clone2DieProbImm,Clone2DivProb");
                 writer.newLine();
             }
             writer.write(timestep + "," + Lymphocytes.count + "," + TriggeringCells.count + "," + TumorCells.count + "," + TumorCells.countRad + "," +
-                    DoomedCells.count + "," + DoomedCells.countRad + "," + Lymphocytes.dieProb + "," + TumorCells.dieProbRad + "," +
+                    DoomedCells.count + "," + DoomedCells.countRad + "," + DoomedCells.countImm + "," + Lymphocytes.dieProb + "," + TumorCells.dieProbRad + "," +
                     TumorCells.dieProbImm + "," + TumorCells.divProb + "," + TriggeringCells.SurvivingFractionTLast + "," +
                     OnLattice2DGrid.primaryImmuneResponse + "," + OnLattice2DGrid.secondaryImmuneResponse + "," +
                     OnLattice2DGrid.immuneResponse + "," + OnLattice2DGrid.newLymphocytesAttempted + "," + FigParameters.immuneSuppressionEffect + "," +
@@ -33,7 +36,10 @@ public class CSVWriter {
                     TumorCells.cloneCount[2] + "," +
                     TumorCells.cloneCountRad[0] + "," +
                     TumorCells.cloneCountRad[1] + "," +
-                    TumorCells.cloneCountRad[2]);
+                    TumorCells.cloneCountRad[2] + "," +
+                    TumorCells.cloneDieProbRad[0] + "," + TumorCells.cloneDieProbImm[0] + "," + TumorCells.cloneDivProb[0] + "," +
+                    TumorCells.cloneDieProbRad[1] + "," + TumorCells.cloneDieProbImm[1] + "," + TumorCells.cloneDivProb[1] + "," +
+                    TumorCells.cloneDieProbRad[2] + "," + TumorCells.cloneDieProbImm[2] + "," + TumorCells.cloneDivProb[2]);
             writer.newLine();
         } catch (IOException e) {
             System.err.println("Failed to write CSV file: " + e.getMessage());
@@ -42,16 +48,12 @@ public class CSVWriter {
         }
     }
 
-    public void saveProbabilitiesToCSV(String fullPath2, boolean append, int timestep, boolean duringRadiation) {
+    public void saveProbabilitiesToCSV(String fullPath2, boolean append, int timestep) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(fullPath2, append))) {
             if (timestep == 0) {
                 writer.write("Timestep,Cell,Type,Color,Radiated,RadiationDose,DeathFromRadiation," +
                         "DieProb,ActivateProb,DieProbRad,DieProbImm,DivProb,LymphocyteNeighbors");
                 writer.newLine();
-            }
-
-            if (duringRadiation) {
-                writer.write("Before Radiation Effects\n");
             }
 
             if (timestep >= 0) {
@@ -64,10 +66,6 @@ public class CSVWriter {
                         writer.newLine();
                     }
                 }
-            }
-
-            if (duringRadiation) {
-                writer.write("\nAfter Radiation Effects");
             }
 
             writer.newLine();

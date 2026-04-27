@@ -180,6 +180,14 @@ public class RadiationManager {
                     cell.dieProbImm = Tvalues[1];
                     cell.divProb    = Tvalues[2];
 
+                    // Set persistent sublethal damage on irradiated tumour cells.
+                    // Cells that survive radiation carry DNA damage that slows proliferation.
+                    // Damage level scales with dose and clone-specific radiosensitivity (alpha).
+                    double alpha = FigParameters.radiationSensitivityOfTumorCellsAlpha
+                                 * FigParameters.cloneAlphaMultiplier[cloneId];
+                    double sf = Math.exp(-alpha * SimulationParameters.currentRadiationDose);
+                    cell.radiationDamage = Math.min(0.9, (1.0 - sf) * 0.5);
+
                     if (!cell.radiated) {
                         TumorCells.countRad++;
                         TumorCells.cloneCountRad[cloneId]++;
@@ -193,11 +201,53 @@ public class RadiationManager {
                 cell.radiated = true;
             }
         }
+
+        // Valley dose: tumour cells between beam circles receive a fraction of the
+        // peak dose.  In synchrotron MRT/MB the valley dose arises from photon
+        // scatter between narrow beams.  Valley dose is high enough to damage
+        // tumour cells (impaired DNA repair) but spares normal tissue including
+        // lymphocytes (intact repair capacity).  This is the primary mechanism
+        // behind MRT/MB tissue-sparing superiority over broad-beam radiation.
+        if (SimulationParameters.valleyDoseRatio > 0) {
+            int valleyDose = (int) (SimulationParameters.appliedRadiationDose
+                                  * SimulationParameters.valleyDoseRatio);
+            if (valleyDose > 0) {
+                for (int i = 0; i < grid.xDim; i++) {
+                    for (int j = 0; j < grid.yDim; j++) {
+                        CellFunctions cell = grid.GetAgent(i, j);
+                        // Only apply to tumour cells NOT already hit by peak dose
+                        // Lymphocytes are spared — normal tissue repair handles valley dose
+                        if (cell != null && !cell.radiated
+                                && cell.type == CellFunctions.Type.TUMOR) {
+                            int cloneId = cell.cloneId;
+                            cell.radiationDose = valleyDose;
+
+                            double[] Tvalues = CellFunctions.getTumorCellsProb(
+                                    valleyDose, cloneId);
+                            cell.dieProbRad = Tvalues[0];
+                            cell.dieProbImm = Tvalues[1];
+                            cell.divProb    = Tvalues[2];
+
+                            // Persistent sublethal damage from valley dose
+                            double alpha = FigParameters.radiationSensitivityOfTumorCellsAlpha
+                                         * FigParameters.cloneAlphaMultiplier[cloneId];
+                            double sf = Math.exp(-alpha * valleyDose);
+                            cell.radiationDamage = Math.min(0.9, (1.0 - sf) * 0.5);
+
+                            cell.radiated = true;
+                            TumorCells.countRad++;
+                            TumorCells.cloneCountRad[cloneId]++;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void radiationUnapplied() {
         SimulationParameters.currentRadiationDose = SimulationParameters.baseRadiationDose;
 
+        // Unapply peak-dosed cells (in beam circles)
         for (int[] pixel : params.radiatedPixels) {
             CellFunctions cell = grid.GetAgent(pixel[0], pixel[1]);
             if (cell != null) {
@@ -213,5 +263,23 @@ public class RadiationManager {
                 }
             }
         }
+
+        // Unapply valley-dosed cells (tumour cells outside beam circles)
+        if (SimulationParameters.valleyDoseRatio > 0) {
+            for (int i = 0; i < grid.xDim; i++) {
+                for (int j = 0; j < grid.yDim; j++) {
+                    CellFunctions cell = grid.GetAgent(i, j);
+                    if (cell != null && cell.radiated
+                            && cell.type == CellFunctions.Type.TUMOR) {
+                        TumorCells.countRad--;
+                        TumorCells.cloneCountRad[cell.cloneId]--;
+                        cell.radiated = false;
+                        cell.radiationDose = SimulationParameters.currentRadiationDose;
+                    }
+                }
+            }
+        }
+        // Reset valley dose ratio for next scenario (static field persists across BatchRunner trials)
+        SimulationParameters.valleyDoseRatio = 0.0;
     }
 }
