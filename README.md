@@ -184,7 +184,7 @@ Open `GBM_SimulationResults.ipynb` in Jupyter. The notebook reads the CSVs from 
 - **Predecessor:** Tanaya Bowade, *Agent-Based Modelling of Glioblastoma Radiotherapy Response* (MSc dissertation, University of Roehampton, 2024). The commit tagged `tanaya-baseline` marks the starting point of this project.
 - **Original framework:** Hannah G. Simon, [HALModeling2024](https://github.com/hannahgsimon/HALModeling2024).
 - **Empirical reference data:** Romano et al. (2021); Cho et al. (2023).
-- **This work:** Nafisa Maliat (BSc Computer Science, University of Roehampton, 2025–2026) — supervisor: [supervisor name].
+- **This work:** Nafisa Maliat (BSc Computer Science, University of Roehampton, 2025–2026) - supervisor: Dr. Arturo Araujo
 
 ---
 

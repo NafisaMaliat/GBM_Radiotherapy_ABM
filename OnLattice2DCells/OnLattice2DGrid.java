@@ -115,7 +115,7 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
             CellFunctions.getImmuneSuppressionEffectThreshold(Lymphocytes.count <= 1);
         }
 
-        // Nafisa
+
         CellFunctions.getImmuneResponse();
         double[] Tvalues = CellFunctions.getTumorCellsProb(
                 SimulationParameters.baseRadiationDose,
@@ -183,7 +183,6 @@ public class OnLattice2DGrid extends AgentGrid2D<CellFunctions> {
      *               parameters required for the cells' behavior during the simulation step.
      */
 
-    // Nafisa
     public void StepCells(OnLattice2DGrid model, SimulationParameters params) {
         triggeringDied = false;
 

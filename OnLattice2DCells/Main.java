@@ -98,7 +98,7 @@ public class Main {
 
 
     //Input scenario to run
-    public static String scenario = "BB15";
+    public static String scenario = "MRT600";
 
 
     public static void main(String[] args) {
